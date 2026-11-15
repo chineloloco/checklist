@@ -1,0 +1,1 @@
+ALTER TABLE "inspections" ADD COLUMN "creation_hash" varchar(100) NOT NULL;

@@ -1,0 +1,3246 @@
+{
+  "source_file": "C:\\Users\\ycaro\\Downloads\\MODELOS DE CHECK LIST.xlsx",
+  "extraction_notes": [
+    "Item text is preserved exactly as stored in the workbook, including spelling, capitalization and punctuation.",
+    "printed_number is reference metadata only and must not be used as an internal identifier.",
+    "The TE sheet has no equipment name in its header and remains pending confirmation."
+  ],
+  "templates": [
+    {
+      "source_sheet": "CB - Semanal",
+      "source_dimension": "A2:X60",
+      "code": "CB",
+      "name": "Veículo para transporte de combustíveis",
+      "identification_status": "CONFIRMED_FROM_HEADER",
+      "asset_kind": "VEHICLE",
+      "source_revision_text": "Revisão  ",
+      "identification_fields": [
+        "company",
+        "site",
+        "manufacture_year",
+        "predominant_color",
+        "asset_code",
+        "ownership_type",
+        "responsible_person_name",
+        "driver_license_number",
+        "driver_license_expiry_date",
+        "license_plate",
+        "vehicle_make_model",
+        "mopp_expiry_date"
+      ],
+      "response_options": [
+        "C",
+        "NC",
+        "NA"
+      ],
+      "sections": [
+        {
+          "key": "general",
+          "title": "Itens gerais",
+          "source_row": null,
+          "items": [
+            {
+              "source_row": 11,
+              "printed_number": "1",
+              "text": "Carteira de habilitação"
+            },
+            {
+              "source_row": 12,
+              "printed_number": "2",
+              "text": "Documento IPVA"
+            },
+            {
+              "source_row": 13,
+              "printed_number": "3",
+              "text": "Seguro Obrigatório"
+            },
+            {
+              "source_row": 14,
+              "printed_number": "4",
+              "text": "Pneus Dianteiros (3 mm) / Traseiros (2 mm) Estepe"
+            },
+            {
+              "source_row": 15,
+              "printed_number": "5",
+              "text": "Porcas/Parafusos e Trincas das Rodas"
+            },
+            {
+              "source_row": 16,
+              "printed_number": "6",
+              "text": "Proteção Partes Moveis e Pontiagudas"
+            },
+            {
+              "source_row": 17,
+              "printed_number": "7",
+              "text": "Estado da lataria (parte externa)"
+            },
+            {
+              "source_row": 18,
+              "printed_number": "8",
+              "text": "Macaco/chave de roda/Triângulo"
+            },
+            {
+              "source_row": 19,
+              "printed_number": "9",
+              "text": "Pára-choques / estribos"
+            },
+            {
+              "source_row": 20,
+              "printed_number": "10",
+              "text": "Extintor validade"
+            },
+            {
+              "source_row": 21,
+              "printed_number": "11",
+              "text": "Estado dos pedais / Borrachas"
+            },
+            {
+              "source_row": 22,
+              "printed_number": "12",
+              "text": "Quebra sol /Adesivo limites  Velocidade "
+            },
+            {
+              "source_row": 23,
+              "printed_number": "13",
+              "text": "Teto/Assoalho/Parredes (Interna)"
+            },
+            {
+              "source_row": 24,
+              "printed_number": "14",
+              "text": "Estado dos bancos"
+            },
+            {
+              "source_row": 25,
+              "printed_number": "15",
+              "text": "Estado dos vidros e Retrovisores D/E"
+            },
+            {
+              "source_row": 26,
+              "printed_number": "16",
+              "text": "Cintos de Segurança /  Motorista e Passageiros"
+            },
+            {
+              "source_row": 27,
+              "printed_number": "17",
+              "text": "Faixas refletivas / Adesivo limite de velocidade"
+            },
+            {
+              "source_row": 28,
+              "printed_number": "18",
+              "text": "Tara do veiculo"
+            },
+            {
+              "source_row": 29,
+              "printed_number": "19",
+              "text": "Relógio e funcionamento do disco de tacógrafo."
+            },
+            {
+              "source_row": 30,
+              "printed_number": "20",
+              "text": "Kit de emergência NBR 9734/9735"
+            },
+            {
+              "source_row": 31,
+              "printed_number": "21",
+              "text": "Condições de Mangueiras de abastecimento"
+            },
+            {
+              "source_row": 32,
+              "printed_number": "22",
+              "text": "Partida / Bateria"
+            },
+            {
+              "source_row": 33,
+              "printed_number": "23",
+              "text": "Luzes Direcionais perfeito funcionamento"
+            },
+            {
+              "source_row": 34,
+              "printed_number": "24",
+              "text": "Faróis, Luz Alta/Baixa perfeito funcionamento"
+            },
+            {
+              "source_row": 35,
+              "printed_number": "25",
+              "text": "Luz de Ré, freio,e sirene de Ré"
+            },
+            {
+              "source_row": 36,
+              "printed_number": "26",
+              "text": "Estado das lanternas das luzes."
+            },
+            {
+              "source_row": 37,
+              "printed_number": "27",
+              "text": "Buzina"
+            },
+            {
+              "source_row": 38,
+              "printed_number": "28",
+              "text": "Freio e Freio Estacionário"
+            },
+            {
+              "source_row": 39,
+              "printed_number": "29",
+              "text": "Limpador e Lavador de pára-brisa"
+            },
+            {
+              "source_row": 40,
+              "printed_number": "30",
+              "text": "Escapamento"
+            },
+            {
+              "source_row": 41,
+              "printed_number": "31",
+              "text": "Vazamentos"
+            }
+          ]
+        },
+        {
+          "key": "section_2",
+          "title": "ITENS ESPECIFICOS DO PROCEDIMENTO DE  ABASTECIMENTO",
+          "source_row": 42,
+          "items": [
+            {
+              "source_row": 43,
+              "printed_number": "1",
+              "text": "O Motorista  é Qualificado ?"
+            },
+            {
+              "source_row": 44,
+              "printed_number": "2",
+              "text": "Possui cones, placas e EPI'S adequados"
+            },
+            {
+              "source_row": 45,
+              "printed_number": "3",
+              "text": "Val. da aferição do tanque e equipamentos"
+            },
+            {
+              "source_row": 46,
+              "printed_number": "4",
+              "text": "Sinalizão cod. do produto. (ONU)"
+            },
+            {
+              "source_row": 47,
+              "printed_number": "5",
+              "text": "FISPQ dos produtos que transporta"
+            },
+            {
+              "source_row": 48,
+              "printed_number": "6",
+              "text": "Kit de emergência"
+            },
+            {
+              "source_row": 49,
+              "printed_number": "7",
+              "text": "Procedimento da Atividade e MOPP"
+            },
+            {
+              "source_row": 50,
+              "printed_number": "8",
+              "text": "Escada de acesso ao tanque"
+            },
+            {
+              "source_row": 51,
+              "printed_number": "9",
+              "text": "Adesivo com limite de velocidade"
+            }
+          ]
+        }
+      ],
+      "item_count": 40
+    },
+    {
+      "source_sheet": "CBA - Semanal",
+      "source_dimension": "A2:X56",
+      "code": "CBA",
+      "name": "Caminhão basculante",
+      "identification_status": "CONFIRMED_FROM_HEADER",
+      "asset_kind": "VEHICLE",
+      "source_revision_text": "REVISÃO 01 ",
+      "identification_fields": [
+        "company",
+        "site",
+        "manufacture_year",
+        "predominant_color",
+        "asset_code",
+        "ownership_type",
+        "responsible_person_name",
+        "driver_license_number",
+        "driver_license_expiry_date",
+        "license_plate",
+        "vehicle_make_model"
+      ],
+      "response_options": [
+        "C",
+        "NC",
+        "NA"
+      ],
+      "sections": [
+        {
+          "key": "general",
+          "title": "Itens gerais",
+          "source_row": null,
+          "items": [
+            {
+              "source_row": 11,
+              "printed_number": "1",
+              "text": "Carteira de habilitação"
+            },
+            {
+              "source_row": 12,
+              "printed_number": "2",
+              "text": "Documento IPVA"
+            },
+            {
+              "source_row": 13,
+              "printed_number": "3",
+              "text": "Seguro Obrigatório"
+            },
+            {
+              "source_row": 14,
+              "printed_number": "4",
+              "text": "Pneus dianteiros (3 mm)"
+            },
+            {
+              "source_row": 15,
+              "printed_number": "5",
+              "text": "Pneus traseiros (2 mm)"
+            },
+            {
+              "source_row": 16,
+              "printed_number": "6",
+              "text": "Partes Moveis e Pontiagudas"
+            },
+            {
+              "source_row": 17,
+              "printed_number": "7",
+              "text": "Pneu estepe"
+            },
+            {
+              "source_row": 18,
+              "printed_number": "8",
+              "text": "Porcas/Parafusos e Trincas das Rodas"
+            },
+            {
+              "source_row": 19,
+              "printed_number": "9",
+              "text": "Estado da lataria (parte externa)"
+            },
+            {
+              "source_row": 20,
+              "printed_number": "10",
+              "text": "Macaco/chave de roda/Triângulo"
+            },
+            {
+              "source_row": 21,
+              "printed_number": "11",
+              "text": "Pára-choques / estribos"
+            },
+            {
+              "source_row": 22,
+              "printed_number": "12",
+              "text": "Extintor"
+            },
+            {
+              "source_row": 23,
+              "printed_number": "13",
+              "text": "Estado dos pedais / Borrachas"
+            },
+            {
+              "source_row": 24,
+              "printed_number": "14",
+              "text": "Quebra sol "
+            },
+            {
+              "source_row": 25,
+              "printed_number": "15",
+              "text": "Teto/Assoalho/Parredes (Parte Interna)"
+            },
+            {
+              "source_row": 26,
+              "printed_number": "16",
+              "text": "Estado dos bancos"
+            },
+            {
+              "source_row": 27,
+              "printed_number": "17",
+              "text": "Cintos de Segurança /  Motorista e Passageiros"
+            },
+            {
+              "source_row": 28,
+              "printed_number": "19",
+              "text": "Estado dos vidros e Retrovisores D/E"
+            },
+            {
+              "source_row": 29,
+              "printed_number": "20",
+              "text": "Relógio e funcionamento do disco de tacógrafo."
+            },
+            {
+              "source_row": 30,
+              "printed_number": "21",
+              "text": "Tara do Veiculo"
+            },
+            {
+              "source_row": 31,
+              "printed_number": "22",
+              "text": "Faixas refletivas"
+            },
+            {
+              "source_row": 32,
+              "printed_number": "23",
+              "text": "Condições de Partida / Bateria"
+            },
+            {
+              "source_row": 33,
+              "printed_number": "24",
+              "text": "Pisca dianteiro direito"
+            },
+            {
+              "source_row": 34,
+              "printed_number": "25",
+              "text": "Pisca dianteiro esquerdo"
+            },
+            {
+              "source_row": 35,
+              "printed_number": "26",
+              "text": "Pisca traseiro direito"
+            },
+            {
+              "source_row": 36,
+              "printed_number": "27",
+              "text": "Pisca traseiro esquerdo"
+            },
+            {
+              "source_row": 37,
+              "printed_number": "28",
+              "text": "Pisca ALERTA"
+            },
+            {
+              "source_row": 38,
+              "printed_number": "29",
+              "text": "Meia luz"
+            },
+            {
+              "source_row": 39,
+              "printed_number": "30",
+              "text": "Luz baixa"
+            },
+            {
+              "source_row": 40,
+              "printed_number": "31",
+              "text": "Luz alta"
+            },
+            {
+              "source_row": 41,
+              "printed_number": "32",
+              "text": "Luz de Ré, freio,e sirene de Ré"
+            },
+            {
+              "source_row": 42,
+              "printed_number": "33",
+              "text": "Estado das lanternas das luzes."
+            },
+            {
+              "source_row": 43,
+              "printed_number": "34",
+              "text": "Buzina"
+            },
+            {
+              "source_row": 44,
+              "printed_number": "35",
+              "text": "Freio e Freio Estacionário"
+            },
+            {
+              "source_row": 45,
+              "printed_number": "36",
+              "text": "Limpador e Lavador de pára-brisa"
+            },
+            {
+              "source_row": 46,
+              "printed_number": "38",
+              "text": "Escapamento"
+            },
+            {
+              "source_row": 47,
+              "printed_number": "39",
+              "text": "Vazamentos"
+            },
+            {
+              "source_row": 48,
+              "printed_number": "40",
+              "text": "Adesivo com limite de velocidade"
+            }
+          ]
+        }
+      ],
+      "item_count": 38
+    },
+    {
+      "source_sheet": "CC. Semanal",
+      "source_dimension": "A1:X55",
+      "code": "CC",
+      "name": "Caminhão carroceria",
+      "identification_status": "CONFIRMED_FROM_HEADER",
+      "asset_kind": "VEHICLE",
+      "source_revision_text": "REVISÃO 01  ",
+      "identification_fields": [
+        "company",
+        "site",
+        "manufacture_year",
+        "predominant_color",
+        "asset_code",
+        "ownership_type",
+        "responsible_person_name",
+        "driver_license_number",
+        "driver_license_expiry_date",
+        "license_plate",
+        "vehicle_make_model"
+      ],
+      "response_options": [
+        "C",
+        "NC",
+        "NA"
+      ],
+      "sections": [
+        {
+          "key": "general",
+          "title": "Itens gerais",
+          "source_row": null,
+          "items": [
+            {
+              "source_row": 10,
+              "printed_number": "1",
+              "text": "Carteira de habilitação"
+            },
+            {
+              "source_row": 11,
+              "printed_number": "2",
+              "text": "Documento IPVA"
+            },
+            {
+              "source_row": 12,
+              "printed_number": "3",
+              "text": "Seguro Obrigatório"
+            },
+            {
+              "source_row": 13,
+              "printed_number": "4",
+              "text": "Pneus dianteiros (3 mm)"
+            },
+            {
+              "source_row": 14,
+              "printed_number": "5",
+              "text": "Pneus traseiros (2 mm)"
+            },
+            {
+              "source_row": 15,
+              "printed_number": "6",
+              "text": "Partes Moveis e Pontiagudas"
+            },
+            {
+              "source_row": 16,
+              "printed_number": "7",
+              "text": "Pneu estepe"
+            },
+            {
+              "source_row": 17,
+              "printed_number": "8",
+              "text": "Porcas/Parafusos e Trincas das Rodas"
+            },
+            {
+              "source_row": 18,
+              "printed_number": "9",
+              "text": "Estado da lataria (parte externa)"
+            },
+            {
+              "source_row": 19,
+              "printed_number": "10",
+              "text": "Macaco/chave de roda/Triângulo"
+            },
+            {
+              "source_row": 20,
+              "printed_number": "11",
+              "text": "Pára-choques / estribos"
+            },
+            {
+              "source_row": 21,
+              "printed_number": "12",
+              "text": "Extintor"
+            },
+            {
+              "source_row": 22,
+              "printed_number": "13",
+              "text": "Estado dos pedais / Borrachas"
+            },
+            {
+              "source_row": 23,
+              "printed_number": "14",
+              "text": "Quebra sol "
+            },
+            {
+              "source_row": 24,
+              "printed_number": "15",
+              "text": "Teto/Assoalho/Parredes (Parte Interna)"
+            },
+            {
+              "source_row": 25,
+              "printed_number": "16",
+              "text": "Estado dos bancos"
+            },
+            {
+              "source_row": 26,
+              "printed_number": "17",
+              "text": "Cintos de Segurança /  Motorista e Passageiros"
+            },
+            {
+              "source_row": 27,
+              "printed_number": "19",
+              "text": "Estado dos vidros e Retrovisores D/E"
+            },
+            {
+              "source_row": 28,
+              "printed_number": "20",
+              "text": "Relógio e funcionamento do disco de tacógrafo."
+            },
+            {
+              "source_row": 29,
+              "printed_number": "21",
+              "text": "Tara do Veiculo"
+            },
+            {
+              "source_row": 30,
+              "printed_number": "22",
+              "text": "Faixas refletivas"
+            },
+            {
+              "source_row": 31,
+              "printed_number": "23",
+              "text": "Condições de Partida / Bateria"
+            },
+            {
+              "source_row": 32,
+              "printed_number": "24",
+              "text": "Pisca dianteiro direito"
+            },
+            {
+              "source_row": 33,
+              "printed_number": "25",
+              "text": "Pisca dianteiro esquerdo"
+            },
+            {
+              "source_row": 34,
+              "printed_number": "26",
+              "text": "Pisca traseiro direito"
+            },
+            {
+              "source_row": 35,
+              "printed_number": "27",
+              "text": "Pisca traseiro esquerdo"
+            },
+            {
+              "source_row": 36,
+              "printed_number": "28",
+              "text": "Pisca ALERTA"
+            },
+            {
+              "source_row": 37,
+              "printed_number": "29",
+              "text": "Meia luz"
+            },
+            {
+              "source_row": 38,
+              "printed_number": "30",
+              "text": "Luz baixa"
+            },
+            {
+              "source_row": 39,
+              "printed_number": "31",
+              "text": "Luz alta"
+            },
+            {
+              "source_row": 40,
+              "printed_number": "32",
+              "text": "Luz de Ré, freio,e sirene de Ré"
+            },
+            {
+              "source_row": 41,
+              "printed_number": "33",
+              "text": "Estado das lanternas das luzes."
+            },
+            {
+              "source_row": 42,
+              "printed_number": "34",
+              "text": "Buzina"
+            },
+            {
+              "source_row": 43,
+              "printed_number": "35",
+              "text": "Freio e Freio Estacionário"
+            },
+            {
+              "source_row": 44,
+              "printed_number": "36",
+              "text": "Limpador e Lavador de pára-brisa"
+            },
+            {
+              "source_row": 45,
+              "printed_number": "38",
+              "text": "Escapamento"
+            },
+            {
+              "source_row": 46,
+              "printed_number": "39",
+              "text": "Vazamentos"
+            },
+            {
+              "source_row": 47,
+              "printed_number": "40",
+              "text": "Adesivo com limite de velocidade"
+            }
+          ]
+        }
+      ],
+      "item_count": 38
+    },
+    {
+      "source_sheet": "CP - Semanal",
+      "source_dimension": "A1:X58",
+      "code": "CP",
+      "name": "Caminhão pipa",
+      "identification_status": "CONFIRMED_FROM_HEADER",
+      "asset_kind": "VEHICLE",
+      "source_revision_text": "Revisão ",
+      "identification_fields": [
+        "company",
+        "site",
+        "manufacture_year",
+        "predominant_color",
+        "asset_code",
+        "ownership_type",
+        "responsible_person_name",
+        "driver_license_number",
+        "driver_license_expiry_date",
+        "license_plate",
+        "vehicle_make_model"
+      ],
+      "response_options": [
+        "C",
+        "NC",
+        "NA"
+      ],
+      "sections": [
+        {
+          "key": "general",
+          "title": "Itens gerais",
+          "source_row": null,
+          "items": [
+            {
+              "source_row": 10,
+              "printed_number": "1",
+              "text": "Carteira de habilitação"
+            },
+            {
+              "source_row": 11,
+              "printed_number": "2",
+              "text": "Documento IPVA"
+            },
+            {
+              "source_row": 12,
+              "printed_number": "3",
+              "text": "Seguro Obrigatório"
+            },
+            {
+              "source_row": 13,
+              "printed_number": "4",
+              "text": "Pneus dianteiros (3 mm)"
+            },
+            {
+              "source_row": 14,
+              "printed_number": "5",
+              "text": "Pneus traseiros (2 mm)"
+            },
+            {
+              "source_row": 15,
+              "printed_number": "6",
+              "text": "Pneu estepe"
+            },
+            {
+              "source_row": 16,
+              "printed_number": "7",
+              "text": "Porcas/Parafusos e Trincas das Rodas"
+            },
+            {
+              "source_row": 17,
+              "printed_number": "8",
+              "text": "Partes Moveis e Pontiagudas"
+            },
+            {
+              "source_row": 18,
+              "printed_number": "9",
+              "text": "Estado da lataria (parte externa)"
+            },
+            {
+              "source_row": 19,
+              "printed_number": "10",
+              "text": "Macaco/chave de roda/Triângulo"
+            },
+            {
+              "source_row": 20,
+              "printed_number": "11",
+              "text": "Pára-choques / estribos"
+            },
+            {
+              "source_row": 21,
+              "printed_number": "12",
+              "text": "Extintor"
+            },
+            {
+              "source_row": 22,
+              "printed_number": "13",
+              "text": "Estado dos pedais / Borrachas"
+            },
+            {
+              "source_row": 23,
+              "printed_number": "14",
+              "text": "Quebra sol "
+            },
+            {
+              "source_row": 24,
+              "printed_number": "15",
+              "text": "Teto/Assoalho/Parredes (Interna)"
+            },
+            {
+              "source_row": 25,
+              "printed_number": "16",
+              "text": "Estado dos bancos"
+            },
+            {
+              "source_row": 26,
+              "printed_number": "18",
+              "text": "Cintos de Segurança /  Motorista e Passageiros"
+            },
+            {
+              "source_row": 27,
+              "printed_number": "19",
+              "text": "Faixas refletivas"
+            },
+            {
+              "source_row": 28,
+              "printed_number": "20",
+              "text": "Estado dos vidros e Retrovisores D/E"
+            },
+            {
+              "source_row": 29,
+              "printed_number": "21",
+              "text": "Relógio e funcionamento do disco de tacógrafo."
+            },
+            {
+              "source_row": 30,
+              "printed_number": "22",
+              "text": "Tara do Veiculo"
+            },
+            {
+              "source_row": 31,
+              "printed_number": "23",
+              "text": "Vazamentos"
+            },
+            {
+              "source_row": 32,
+              "printed_number": "24",
+              "text": "Condições de Bateria / Partida"
+            },
+            {
+              "source_row": 33,
+              "printed_number": "25",
+              "text": "Pisca dianteiro direito"
+            },
+            {
+              "source_row": 34,
+              "printed_number": "26",
+              "text": "Pisca dianteiro esquerdo"
+            },
+            {
+              "source_row": 35,
+              "printed_number": "27",
+              "text": "Pisca traseiro direito"
+            },
+            {
+              "source_row": 36,
+              "printed_number": "28",
+              "text": "Pisca traseiro esquerdo"
+            },
+            {
+              "source_row": 37,
+              "printed_number": "29",
+              "text": "Pisca ALERTA"
+            },
+            {
+              "source_row": 38,
+              "printed_number": "30",
+              "text": "Meia luz"
+            },
+            {
+              "source_row": 39,
+              "printed_number": "31",
+              "text": "Luz baixa"
+            },
+            {
+              "source_row": 40,
+              "printed_number": "32",
+              "text": "Luz alta"
+            },
+            {
+              "source_row": 41,
+              "printed_number": "33",
+              "text": "Luz de Ré, freio,e sirene de Ré"
+            },
+            {
+              "source_row": 42,
+              "printed_number": "34",
+              "text": "Estado das lanternas das luzes."
+            },
+            {
+              "source_row": 43,
+              "printed_number": "35",
+              "text": "Buzina"
+            },
+            {
+              "source_row": 44,
+              "printed_number": "36",
+              "text": "Freio e Freio Estacionário"
+            },
+            {
+              "source_row": 45,
+              "printed_number": "37",
+              "text": "Limpador e Lavador de pára-brisa"
+            },
+            {
+              "source_row": 46,
+              "printed_number": "39",
+              "text": "Escapamento"
+            },
+            {
+              "source_row": 47,
+              "printed_number": "40",
+              "text": "Escada de acesso ao pipa/ Guarda corpo  em altura minima 1,20m"
+            },
+            {
+              "source_row": 48,
+              "printed_number": "41",
+              "text": "Bloqueio do tanque tipo X"
+            },
+            {
+              "source_row": 49,
+              "printed_number": "42",
+              "text": "Adesivo com limite de velocidade"
+            },
+            {
+              "source_row": 50,
+              "printed_number": "43",
+              "text": "Adesivo água não potável ou água potavel"
+            }
+          ]
+        }
+      ],
+      "item_count": 41
+    },
+    {
+      "source_sheet": "CM - Semanal",
+      "source_dimension": "A1:AB59",
+      "code": "CM",
+      "name": "Caminhão Munk",
+      "identification_status": "CONFIRMED_FROM_HEADER",
+      "asset_kind": "VEHICLE",
+      "source_revision_text": "Revisção 01 ",
+      "identification_fields": [
+        "company",
+        "site",
+        "manufacture_year",
+        "predominant_color",
+        "asset_code",
+        "ownership_type",
+        "responsible_person_name",
+        "driver_license_number",
+        "driver_license_expiry_date",
+        "license_plate",
+        "vehicle_make_model"
+      ],
+      "response_options": [
+        "C",
+        "NC",
+        "NA"
+      ],
+      "sections": [
+        {
+          "key": "general",
+          "title": "Itens gerais",
+          "source_row": null,
+          "items": [
+            {
+              "source_row": 10,
+              "printed_number": "1",
+              "text": "Carteira de habilitação"
+            },
+            {
+              "source_row": 11,
+              "printed_number": "2",
+              "text": "Documento IPVA"
+            },
+            {
+              "source_row": 12,
+              "printed_number": "3",
+              "text": "Seguro Obrigatório"
+            },
+            {
+              "source_row": 13,
+              "printed_number": "4",
+              "text": "Pneus dianteiros (3mm) Pneus traseiros (2mm)"
+            },
+            {
+              "source_row": 14,
+              "printed_number": "5",
+              "text": "Pneu estepe/Macaco/Chave de roda/Triângulo"
+            },
+            {
+              "source_row": 15,
+              "printed_number": "6",
+              "text": "Pára-choques / Quebra sol / estribos"
+            },
+            {
+              "source_row": 16,
+              "printed_number": "7",
+              "text": "Porcas/Parafusos e Trincas das Rodas"
+            },
+            {
+              "source_row": 17,
+              "printed_number": "8",
+              "text": "Partes Moveis e Pontiagudas"
+            },
+            {
+              "source_row": 18,
+              "printed_number": "9",
+              "text": "Estado da lataria (parte externa)"
+            },
+            {
+              "source_row": 19,
+              "printed_number": "10",
+              "text": "Teto/Assoalho/Parredes / Estado dos bancos"
+            },
+            {
+              "source_row": 20,
+              "printed_number": "11",
+              "text": "Extintor validade"
+            },
+            {
+              "source_row": 21,
+              "printed_number": "12",
+              "text": "Estado dos pedais / Borrachas"
+            },
+            {
+              "source_row": 22,
+              "printed_number": "13",
+              "text": "Cintos de Segurança /  Motorista e Passageiros"
+            },
+            {
+              "source_row": 23,
+              "printed_number": "14",
+              "text": "Adesivo limite de velocidade"
+            },
+            {
+              "source_row": 24,
+              "printed_number": "15",
+              "text": "Estado dos vidros e Retrovisores D/E"
+            },
+            {
+              "source_row": 25,
+              "printed_number": "16",
+              "text": "Relógio e funcionamento do disco de tacógrafo."
+            },
+            {
+              "source_row": 26,
+              "printed_number": "17",
+              "text": "Faixas refletivas / Tara do Veiculo"
+            },
+            {
+              "source_row": 27,
+              "printed_number": "19",
+              "text": "Bateria / Partida"
+            },
+            {
+              "source_row": 28,
+              "printed_number": "20",
+              "text": "Luzes Direcionais perfeito funcionamento"
+            },
+            {
+              "source_row": 29,
+              "printed_number": "21",
+              "text": "Luz de Ré, freio,e sirene de Ré / Buzina"
+            },
+            {
+              "source_row": 30,
+              "printed_number": "22",
+              "text": "Estado das lanternas das luzes."
+            },
+            {
+              "source_row": 31,
+              "printed_number": "23",
+              "text": "Faróis, Luz Alta/Baixa perfeito funcionamento"
+            },
+            {
+              "source_row": 32,
+              "printed_number": "24",
+              "text": "Freio e Freio Estacionário"
+            },
+            {
+              "source_row": 33,
+              "printed_number": "25",
+              "text": "Limpador e Lavador de pára-brisa"
+            },
+            {
+              "source_row": 34,
+              "printed_number": "27",
+              "text": "Escapamento / Vazamentos"
+            },
+            {
+              "source_row": 35,
+              "printed_number": "28",
+              "text": "O Operador é Qualificado e Treinado? "
+            },
+            {
+              "source_row": 36,
+              "printed_number": "29",
+              "text": "Possui cones, placas e EPI'S adequados"
+            }
+          ]
+        },
+        {
+          "key": "section_2",
+          "title": "CINTAS",
+          "source_row": 37,
+          "items": [
+            {
+              "source_row": 38,
+              "printed_number": "30",
+              "text": "Limpeza, estado de conservação"
+            },
+            {
+              "source_row": 39,
+              "printed_number": "31",
+              "text": "Rasgos ou desfiados em suas fibras"
+            },
+            {
+              "source_row": 40,
+              "printed_number": "32",
+              "text": "Identificação visível da capacidade de carga"
+            },
+            {
+              "source_row": 41,
+              "printed_number": "33",
+              "text": "São armazenados adequadamente?"
+            }
+          ]
+        },
+        {
+          "key": "section_3",
+          "title": "GANCHOS",
+          "source_row": 42,
+          "items": [
+            {
+              "source_row": 43,
+              "printed_number": "34",
+              "text": "Trincas e rachaduras?"
+            },
+            {
+              "source_row": 44,
+              "printed_number": "35",
+              "text": "Trava de segurança e estado da mesma"
+            },
+            {
+              "source_row": 45,
+              "printed_number": "36",
+              "text": "Esta armazenado adequadamente?"
+            },
+            {
+              "source_row": 46,
+              "printed_number": "37",
+              "text": "Possui pinos e contra-pinos?"
+            }
+          ]
+        },
+        {
+          "key": "section_4",
+          "title": "OUTROS",
+          "source_row": 47,
+          "items": [
+            {
+              "source_row": 48,
+              "printed_number": "38",
+              "text": "Possui Capacidade Maxima de Trabalho?"
+            },
+            {
+              "source_row": 49,
+              "printed_number": "39",
+              "text": "Estado das Patolas"
+            },
+            {
+              "source_row": 50,
+              "printed_number": "40",
+              "text": "Sistema de Patolamento Funciona"
+            },
+            {
+              "source_row": 51,
+              "printed_number": "41",
+              "text": "Funcionamento da Lança"
+            },
+            {
+              "source_row": 52,
+              "printed_number": "42",
+              "text": "Estado dasmangueiras/trincas"
+            }
+          ]
+        }
+      ],
+      "item_count": 40
+    },
+    {
+      "source_sheet": "ONIBUS - Semanal",
+      "source_dimension": "A1:X57",
+      "code": "ONIBUS",
+      "name": "Ônibus",
+      "identification_status": "CONFIRMED_FROM_HEADER",
+      "asset_kind": "VEHICLE",
+      "source_revision_text": "Revisão 01",
+      "identification_fields": [
+        "company",
+        "site",
+        "manufacture_year",
+        "predominant_color",
+        "asset_code",
+        "ownership_type",
+        "responsible_person_name",
+        "driver_license_number",
+        "driver_license_expiry_date",
+        "license_plate",
+        "vehicle_make_model",
+        "passenger_transport_course_expiry_date"
+      ],
+      "response_options": [
+        "C",
+        "NC",
+        "NA"
+      ],
+      "sections": [
+        {
+          "key": "general",
+          "title": "Itens gerais",
+          "source_row": null,
+          "items": [
+            {
+              "source_row": 10,
+              "printed_number": "1",
+              "text": "Carteira de habilitação"
+            },
+            {
+              "source_row": 11,
+              "printed_number": "2",
+              "text": "Documento IPVA"
+            },
+            {
+              "source_row": 12,
+              "printed_number": "3",
+              "text": "Seguro Obrigatório"
+            },
+            {
+              "source_row": 13,
+              "printed_number": "4",
+              "text": "Pneus dianteiros (3 mm)"
+            },
+            {
+              "source_row": 14,
+              "printed_number": "5",
+              "text": "Pneus traseiros (2 mm)"
+            },
+            {
+              "source_row": 15,
+              "printed_number": "6",
+              "text": "Pneu estepe"
+            },
+            {
+              "source_row": 16,
+              "printed_number": "7",
+              "text": "Porcas/Parafusos e Trincas das Rodas"
+            },
+            {
+              "source_row": 17,
+              "printed_number": "8",
+              "text": "Partes Moveis e Pontiagudas"
+            },
+            {
+              "source_row": 18,
+              "printed_number": "9",
+              "text": "Estado da lataria (parte externa)"
+            },
+            {
+              "source_row": 19,
+              "printed_number": "10",
+              "text": "Estado da lataria (parte interna)"
+            },
+            {
+              "source_row": 20,
+              "printed_number": "11",
+              "text": "Macaco/chave de roda/Triângulo"
+            },
+            {
+              "source_row": 21,
+              "printed_number": "12",
+              "text": "Pára-choques / estribos"
+            },
+            {
+              "source_row": 22,
+              "printed_number": "13",
+              "text": "Extintor validade"
+            },
+            {
+              "source_row": 23,
+              "printed_number": "14",
+              "text": "Estado dos pedais / Borrachas"
+            },
+            {
+              "source_row": 24,
+              "printed_number": "15",
+              "text": "Quebra sol  "
+            },
+            {
+              "source_row": 25,
+              "printed_number": "16",
+              "text": "Saídas de Emergência 2 lados"
+            },
+            {
+              "source_row": 26,
+              "printed_number": "17",
+              "text": "Estado dos bancos"
+            },
+            {
+              "source_row": 27,
+              "printed_number": "18",
+              "text": "Cintos de Segurança /  Motorista e Passageiros"
+            },
+            {
+              "source_row": 28,
+              "printed_number": "19",
+              "text": "Estado dos vidros e Retrovisores D/E"
+            },
+            {
+              "source_row": 29,
+              "printed_number": "20",
+              "text": "Faixas refletivas"
+            },
+            {
+              "source_row": 30,
+              "printed_number": "21",
+              "text": "Relógio e funcionamento do disco de tacógrafo."
+            },
+            {
+              "source_row": 31,
+              "printed_number": "22",
+              "text": "Porca e Contra Pino do Términal da Barra de Direção."
+            },
+            {
+              "source_row": 32,
+              "printed_number": "23",
+              "text": "Condições de Bateria / Partida"
+            },
+            {
+              "source_row": 33,
+              "printed_number": "24",
+              "text": "Pisca dianteiro direito"
+            },
+            {
+              "source_row": 34,
+              "printed_number": "25",
+              "text": "Pisca dianteiro esquerdo"
+            },
+            {
+              "source_row": 35,
+              "printed_number": "26",
+              "text": "Pisca traseiro direito"
+            },
+            {
+              "source_row": 36,
+              "printed_number": "27",
+              "text": "Pisca traseiro esquerdo"
+            },
+            {
+              "source_row": 37,
+              "printed_number": "28",
+              "text": "Pisca ALERTA"
+            },
+            {
+              "source_row": 38,
+              "printed_number": "29",
+              "text": "Meia luz"
+            },
+            {
+              "source_row": 39,
+              "printed_number": "30",
+              "text": "Luz baixa"
+            },
+            {
+              "source_row": 40,
+              "printed_number": "31",
+              "text": "Luz alta"
+            },
+            {
+              "source_row": 41,
+              "printed_number": "32",
+              "text": "Luz de Ré, freio,e sirene de Ré"
+            },
+            {
+              "source_row": 42,
+              "printed_number": "33",
+              "text": "Estado das lanternas das luzes."
+            },
+            {
+              "source_row": 43,
+              "printed_number": "34",
+              "text": "Buzina"
+            },
+            {
+              "source_row": 44,
+              "printed_number": "35",
+              "text": "Freio e Freio Estacionário"
+            },
+            {
+              "source_row": 45,
+              "printed_number": "36",
+              "text": "Limpador e Lavador de pára-brisa"
+            },
+            {
+              "source_row": 46,
+              "printed_number": "37",
+              "text": "Escapamento"
+            },
+            {
+              "source_row": 47,
+              "printed_number": "38",
+              "text": "Vazamentos"
+            },
+            {
+              "source_row": 48,
+              "printed_number": "39",
+              "text": "Adesivo limite de velocidade"
+            }
+          ]
+        }
+      ],
+      "item_count": 39
+    },
+    {
+      "source_sheet": "MO - Semanal",
+      "source_dimension": "A1:AB58",
+      "code": "MO",
+      "name": "Micro-ônibus",
+      "identification_status": "CONFIRMED_FROM_HEADER",
+      "asset_kind": "VEHICLE",
+      "source_revision_text": "Revisão 01 ",
+      "identification_fields": [
+        "company",
+        "site",
+        "manufacture_year",
+        "predominant_color",
+        "asset_code",
+        "ownership_type",
+        "responsible_person_name",
+        "driver_license_number",
+        "driver_license_expiry_date",
+        "license_plate",
+        "vehicle_make_model",
+        "passenger_transport_course_expiry_date"
+      ],
+      "response_options": [
+        "C",
+        "NC",
+        "NA"
+      ],
+      "sections": [
+        {
+          "key": "general",
+          "title": "Itens gerais",
+          "source_row": null,
+          "items": [
+            {
+              "source_row": 10,
+              "printed_number": "1",
+              "text": "Carteira de habilitação"
+            },
+            {
+              "source_row": 11,
+              "printed_number": "2",
+              "text": "Documento IPVA"
+            },
+            {
+              "source_row": 12,
+              "printed_number": "3",
+              "text": "Seguro Obrigatório"
+            },
+            {
+              "source_row": 13,
+              "printed_number": "4",
+              "text": "Pneus dianteiros (3 mm)"
+            },
+            {
+              "source_row": 14,
+              "printed_number": "5",
+              "text": "Pneus traseiros (2 mm)"
+            },
+            {
+              "source_row": 15,
+              "printed_number": "6",
+              "text": "Pneu estepe"
+            },
+            {
+              "source_row": 16,
+              "printed_number": "7",
+              "text": "Porcas/Parafusos e Trincas das Rodas"
+            },
+            {
+              "source_row": 17,
+              "printed_number": "8",
+              "text": "Partes Moveis e Pontiagudas"
+            },
+            {
+              "source_row": 18,
+              "printed_number": "9",
+              "text": "Estado da lataria (parte externa)"
+            },
+            {
+              "source_row": 19,
+              "printed_number": "10",
+              "text": "Estado da lataria (parte interna)"
+            },
+            {
+              "source_row": 20,
+              "printed_number": "11",
+              "text": "Macaco/chave de roda/Triângulo"
+            },
+            {
+              "source_row": 21,
+              "printed_number": "12",
+              "text": "Pára-choques / estribos"
+            },
+            {
+              "source_row": 22,
+              "printed_number": "13",
+              "text": "Extintor validade"
+            },
+            {
+              "source_row": 23,
+              "printed_number": "14",
+              "text": "Estado dos pedais / Borrachas"
+            },
+            {
+              "source_row": 24,
+              "printed_number": "15",
+              "text": "Quebra sol  "
+            },
+            {
+              "source_row": 25,
+              "printed_number": "16",
+              "text": "Disposit.tip.Martelo 04/Saida de Emergência 2 lados."
+            },
+            {
+              "source_row": 26,
+              "printed_number": "17",
+              "text": "Estado dos bancos"
+            },
+            {
+              "source_row": 27,
+              "printed_number": "18",
+              "text": "Cintos de Segurança /  Motorista e Passageiros"
+            },
+            {
+              "source_row": 28,
+              "printed_number": "20",
+              "text": "Estado dos vidros e Retrovisores D/E"
+            },
+            {
+              "source_row": 29,
+              "printed_number": "21",
+              "text": "Faixas refletivas"
+            },
+            {
+              "source_row": 30,
+              "printed_number": "22",
+              "text": "Prendedor de garrafas térmicas."
+            },
+            {
+              "source_row": 31,
+              "printed_number": "23",
+              "text": "Relógio e funcionamento do disco de tacógrafo."
+            },
+            {
+              "source_row": 32,
+              "printed_number": "24",
+              "text": "Porca e Contra Pino do Términal da Barra de Direção."
+            },
+            {
+              "source_row": 33,
+              "printed_number": "25",
+              "text": "Condições de Bateria / Partida"
+            },
+            {
+              "source_row": 34,
+              "printed_number": "26",
+              "text": "Pisca dianteiro direito"
+            },
+            {
+              "source_row": 35,
+              "printed_number": "27",
+              "text": "Pisca dianteiro esquerdo"
+            },
+            {
+              "source_row": 36,
+              "printed_number": "28",
+              "text": "Pisca traseiro direito"
+            },
+            {
+              "source_row": 37,
+              "printed_number": "29",
+              "text": "Pisca traseiro esquerdo"
+            },
+            {
+              "source_row": 38,
+              "printed_number": "30",
+              "text": "Pisca ALERTA"
+            },
+            {
+              "source_row": 39,
+              "printed_number": "31",
+              "text": "Meia luz"
+            },
+            {
+              "source_row": 40,
+              "printed_number": "32",
+              "text": "Luz baixa"
+            },
+            {
+              "source_row": 41,
+              "printed_number": "33",
+              "text": "Luz alta"
+            },
+            {
+              "source_row": 42,
+              "printed_number": "34",
+              "text": "Luz de Ré, freio,e sirene de Ré"
+            },
+            {
+              "source_row": 43,
+              "printed_number": "35",
+              "text": "Estado das lanternas das luzes."
+            },
+            {
+              "source_row": 44,
+              "printed_number": "36",
+              "text": "Buzina"
+            },
+            {
+              "source_row": 45,
+              "printed_number": "37",
+              "text": "Freio e Freio Estacionário"
+            },
+            {
+              "source_row": 46,
+              "printed_number": "38",
+              "text": "Limpador e Lavador de pára-brisa"
+            },
+            {
+              "source_row": 47,
+              "printed_number": "40",
+              "text": "Escapamento"
+            },
+            {
+              "source_row": 48,
+              "printed_number": "41",
+              "text": "Vazamentos"
+            },
+            {
+              "source_row": 49,
+              "printed_number": "42",
+              "text": "Adesivo limite de velocidade"
+            }
+          ]
+        }
+      ],
+      "item_count": 40
+    },
+    {
+      "source_sheet": "VA - Semanal",
+      "source_dimension": "A1:AB58",
+      "code": "VA",
+      "name": "Van",
+      "identification_status": "CONFIRMED_FROM_HEADER",
+      "asset_kind": "VEHICLE",
+      "source_revision_text": "Revisão 01",
+      "identification_fields": [
+        "company",
+        "site",
+        "manufacture_year",
+        "predominant_color",
+        "asset_code",
+        "ownership_type",
+        "responsible_person_name",
+        "driver_license_number",
+        "driver_license_expiry_date",
+        "license_plate",
+        "vehicle_make_model",
+        "passenger_transport_course_expiry_date"
+      ],
+      "response_options": [
+        "C",
+        "NC",
+        "NA"
+      ],
+      "sections": [
+        {
+          "key": "general",
+          "title": "Itens gerais",
+          "source_row": null,
+          "items": [
+            {
+              "source_row": 10,
+              "printed_number": "1",
+              "text": "Carteira de habilitação"
+            },
+            {
+              "source_row": 11,
+              "printed_number": "2",
+              "text": "Documento IPVA"
+            },
+            {
+              "source_row": 12,
+              "printed_number": "3",
+              "text": "Seguro Obrigatório"
+            },
+            {
+              "source_row": 13,
+              "printed_number": "4",
+              "text": "Pneus dianteiros (3 mm)"
+            },
+            {
+              "source_row": 14,
+              "printed_number": "5",
+              "text": "Pneus traseiros (2 mm)"
+            },
+            {
+              "source_row": 15,
+              "printed_number": "6",
+              "text": "Pneu estepe"
+            },
+            {
+              "source_row": 16,
+              "printed_number": "7",
+              "text": "Porcas/Parafusos e Trincas das Rodas"
+            },
+            {
+              "source_row": 17,
+              "printed_number": "8",
+              "text": "Partes Moveis e Pontiagudas"
+            },
+            {
+              "source_row": 18,
+              "printed_number": "9",
+              "text": "Estado da lataria (parte externa)"
+            },
+            {
+              "source_row": 19,
+              "printed_number": "10",
+              "text": "Estado da lataria (parte interna)"
+            },
+            {
+              "source_row": 20,
+              "printed_number": "11",
+              "text": "Macaco/chave de roda/Triângulo"
+            },
+            {
+              "source_row": 21,
+              "printed_number": "12",
+              "text": "Pára-choques / estribos"
+            },
+            {
+              "source_row": 22,
+              "printed_number": "13",
+              "text": "Extintor validade"
+            },
+            {
+              "source_row": 23,
+              "printed_number": "14",
+              "text": "Estado dos pedais / Borrachas"
+            },
+            {
+              "source_row": 24,
+              "printed_number": "15",
+              "text": "Quebra sol  "
+            },
+            {
+              "source_row": 25,
+              "printed_number": "16",
+              "text": "Disposit.tip.Martelo 04/Saida de Emergência 2 lados."
+            },
+            {
+              "source_row": 26,
+              "printed_number": "17",
+              "text": "Estado dos bancos"
+            },
+            {
+              "source_row": 27,
+              "printed_number": "18",
+              "text": "Cintos de Segurança /  Motorista e Passageiros"
+            },
+            {
+              "source_row": 28,
+              "printed_number": "19",
+              "text": "Estado dos vidros e Retrovisores D/E"
+            },
+            {
+              "source_row": 29,
+              "printed_number": "20",
+              "text": "Faixas refletivas"
+            },
+            {
+              "source_row": 30,
+              "printed_number": "21",
+              "text": "Prendedor de garrafas térmicas."
+            },
+            {
+              "source_row": 31,
+              "printed_number": "22",
+              "text": "Relógio e funcionamento do disco de tacógrafo."
+            },
+            {
+              "source_row": 32,
+              "printed_number": "23",
+              "text": "Porca e Contra Pino do Términal da Barra direção"
+            },
+            {
+              "source_row": 33,
+              "printed_number": "24",
+              "text": "Condições de Bateira / Partida"
+            },
+            {
+              "source_row": 34,
+              "printed_number": "25",
+              "text": "Pisca dianteiro direito"
+            },
+            {
+              "source_row": 35,
+              "printed_number": "26",
+              "text": "Pisca dianteiro esquerdo"
+            },
+            {
+              "source_row": 36,
+              "printed_number": "27",
+              "text": "Pisca traseiro direito"
+            },
+            {
+              "source_row": 37,
+              "printed_number": "28",
+              "text": "Pisca traseiro esquerdo"
+            },
+            {
+              "source_row": 38,
+              "printed_number": "29",
+              "text": "Pisca ALERTA"
+            },
+            {
+              "source_row": 39,
+              "printed_number": "30",
+              "text": "Meia luz"
+            },
+            {
+              "source_row": 40,
+              "printed_number": "31",
+              "text": "Luz baixa"
+            },
+            {
+              "source_row": 41,
+              "printed_number": "32",
+              "text": "Luz alta"
+            },
+            {
+              "source_row": 42,
+              "printed_number": "33",
+              "text": "Luz de Ré, freio,e sirene de Ré"
+            },
+            {
+              "source_row": 43,
+              "printed_number": "34",
+              "text": "Estado das lanternas das luzes."
+            },
+            {
+              "source_row": 44,
+              "printed_number": "35",
+              "text": "Buzina"
+            },
+            {
+              "source_row": 45,
+              "printed_number": "36",
+              "text": "Freio e Freio Estacionário"
+            },
+            {
+              "source_row": 46,
+              "printed_number": "37",
+              "text": "Limpador e Lavador de pára-brisa"
+            },
+            {
+              "source_row": 47,
+              "printed_number": "38",
+              "text": "Escapamento"
+            },
+            {
+              "source_row": 48,
+              "printed_number": "39",
+              "text": "Vazamentos"
+            },
+            {
+              "source_row": 49,
+              "printed_number": "40",
+              "text": "Adesivo Limite de velocidade"
+            }
+          ]
+        }
+      ],
+      "item_count": 40
+    },
+    {
+      "source_sheet": "VL - Semanal",
+      "source_dimension": "A1:Y53",
+      "code": "VL",
+      "name": "Veículos leves",
+      "identification_status": "CONFIRMED_FROM_HEADER",
+      "asset_kind": "VEHICLE",
+      "source_revision_text": "Revisão 01 ",
+      "identification_fields": [
+        "company",
+        "site",
+        "manufacture_year",
+        "predominant_color",
+        "asset_code",
+        "ownership_type",
+        "responsible_person_name",
+        "driver_license_number",
+        "driver_license_expiry_date",
+        "license_plate",
+        "vehicle_make_model"
+      ],
+      "response_options": [
+        "C",
+        "NC",
+        "NA"
+      ],
+      "sections": [
+        {
+          "key": "general",
+          "title": "Itens gerais",
+          "source_row": null,
+          "items": [
+            {
+              "source_row": 10,
+              "printed_number": "1",
+              "text": "Carteira de habilitação"
+            },
+            {
+              "source_row": 11,
+              "printed_number": "2",
+              "text": "Documento IPVA"
+            },
+            {
+              "source_row": 12,
+              "printed_number": "3",
+              "text": "Seguro Obrigatório"
+            },
+            {
+              "source_row": 13,
+              "printed_number": "4",
+              "text": "Pneus dianteiros (3 mm)"
+            },
+            {
+              "source_row": 14,
+              "printed_number": "5",
+              "text": "Pneus traseiros (2 mm)"
+            },
+            {
+              "source_row": 15,
+              "printed_number": "6",
+              "text": "Pneu estepe"
+            },
+            {
+              "source_row": 16,
+              "printed_number": "7",
+              "text": "Porcas/Parafusos e Trincas das Rodas"
+            },
+            {
+              "source_row": 17,
+              "printed_number": "8",
+              "text": "Partes Moveis e Pontiagudas"
+            },
+            {
+              "source_row": 18,
+              "printed_number": "9",
+              "text": "Estado da lataria (parte externa)"
+            },
+            {
+              "source_row": 19,
+              "printed_number": "10",
+              "text": "Macaco/chave de roda/Triângulo"
+            },
+            {
+              "source_row": 20,
+              "printed_number": "11",
+              "text": "Pára-choques"
+            },
+            {
+              "source_row": 21,
+              "printed_number": "12",
+              "text": "Extintor validade"
+            },
+            {
+              "source_row": 22,
+              "printed_number": "13",
+              "text": "Estado dos pedais / Borrachas"
+            },
+            {
+              "source_row": 23,
+              "printed_number": "14",
+              "text": "Quebra sol "
+            },
+            {
+              "source_row": 24,
+              "printed_number": "15",
+              "text": "Teto/Assoalho/Parredes (Interna)"
+            },
+            {
+              "source_row": 25,
+              "printed_number": "16",
+              "text": "Estado dos bancos"
+            },
+            {
+              "source_row": 26,
+              "printed_number": "17",
+              "text": "Cintos de Segurança /  Motorista e Passageiros. Retratil- 3 pontos"
+            },
+            {
+              "source_row": 27,
+              "printed_number": "18",
+              "text": "Estado dos vidros e Retrovisores D/E"
+            },
+            {
+              "source_row": 28,
+              "printed_number": "19",
+              "text": "Condições de Bateria / Partida"
+            },
+            {
+              "source_row": 29,
+              "printed_number": "20",
+              "text": "Pisca dianteiro direito"
+            },
+            {
+              "source_row": 30,
+              "printed_number": "21",
+              "text": "Pisca dianteiro esquerdo"
+            },
+            {
+              "source_row": 31,
+              "printed_number": "22",
+              "text": "Pisca traseiro direito"
+            },
+            {
+              "source_row": 32,
+              "printed_number": "23",
+              "text": "Pisca traseiro esquerdo"
+            },
+            {
+              "source_row": 33,
+              "printed_number": "24",
+              "text": "Pisca ALERTA"
+            },
+            {
+              "source_row": 34,
+              "printed_number": "25",
+              "text": "Meia luz"
+            },
+            {
+              "source_row": 35,
+              "printed_number": "26",
+              "text": "Luz baixa"
+            },
+            {
+              "source_row": 36,
+              "printed_number": "27",
+              "text": "Luz alta"
+            },
+            {
+              "source_row": 37,
+              "printed_number": "28",
+              "text": "Luz de Ré e Luz de Freio"
+            },
+            {
+              "source_row": 38,
+              "printed_number": "29",
+              "text": "Estado das lanternas das luzes."
+            },
+            {
+              "source_row": 39,
+              "printed_number": "30",
+              "text": "Buzina"
+            },
+            {
+              "source_row": 40,
+              "printed_number": "31",
+              "text": "Freio e Freio Estacionário"
+            },
+            {
+              "source_row": 41,
+              "printed_number": "32",
+              "text": "Limpador e Lavador de pára-brisa"
+            },
+            {
+              "source_row": 42,
+              "printed_number": "33",
+              "text": "Escapamento"
+            },
+            {
+              "source_row": 43,
+              "printed_number": "34",
+              "text": "Vazamentos"
+            }
+          ]
+        }
+      ],
+      "item_count": 34
+    },
+    {
+      "source_sheet": "C.PRANCHA - Semanal",
+      "source_dimension": "A1:X55",
+      "code": "C_PRANCHA",
+      "name": "Caminhão prancha",
+      "identification_status": "CONFIRMED_FROM_HEADER",
+      "asset_kind": "VEHICLE",
+      "source_revision_text": "Revisão 01 ",
+      "identification_fields": [
+        "company",
+        "site",
+        "manufacture_year",
+        "predominant_color",
+        "asset_code",
+        "ownership_type",
+        "responsible_person_name",
+        "driver_license_number",
+        "driver_license_expiry_date",
+        "license_plate",
+        "vehicle_make_model"
+      ],
+      "response_options": [
+        "C",
+        "NC",
+        "NA"
+      ],
+      "sections": [
+        {
+          "key": "general",
+          "title": "Itens gerais",
+          "source_row": null,
+          "items": [
+            {
+              "source_row": 10,
+              "printed_number": "1",
+              "text": "Carteira de habilitação"
+            },
+            {
+              "source_row": 11,
+              "printed_number": "2",
+              "text": "Documento IPVA"
+            },
+            {
+              "source_row": 12,
+              "printed_number": "3",
+              "text": "Seguro Obrigatório"
+            },
+            {
+              "source_row": 13,
+              "printed_number": "4",
+              "text": "Pneus dianteiros (3 mm)"
+            },
+            {
+              "source_row": 14,
+              "printed_number": "5",
+              "text": "Pneus traseiros (2 mm)"
+            },
+            {
+              "source_row": 15,
+              "printed_number": "6",
+              "text": "Pneu estepe"
+            },
+            {
+              "source_row": 16,
+              "printed_number": "7",
+              "text": "Porcas/Parafusos e Trincas das Rodas"
+            },
+            {
+              "source_row": 17,
+              "printed_number": "8",
+              "text": "Partes Moveis e Pontiagudas"
+            },
+            {
+              "source_row": 18,
+              "printed_number": "9",
+              "text": "Estado da lataria (parte externa)"
+            },
+            {
+              "source_row": 19,
+              "printed_number": "10",
+              "text": "Macaco/chave de roda/Triângulo"
+            },
+            {
+              "source_row": 20,
+              "printed_number": "11",
+              "text": "Pára-choques / estribos"
+            },
+            {
+              "source_row": 21,
+              "printed_number": "12",
+              "text": "Extintor validade"
+            },
+            {
+              "source_row": 22,
+              "printed_number": "13",
+              "text": "Estado dos pedais / Borrachas"
+            },
+            {
+              "source_row": 23,
+              "printed_number": "14",
+              "text": "Quebra sol "
+            },
+            {
+              "source_row": 24,
+              "printed_number": "15",
+              "text": "Teto/Assoalho/Parredes (Parte Interna)"
+            },
+            {
+              "source_row": 25,
+              "printed_number": "16",
+              "text": "Estado dos bancos"
+            },
+            {
+              "source_row": 26,
+              "printed_number": "17",
+              "text": "Cintos de Segurança /  Motorista e Passageiros"
+            },
+            {
+              "source_row": 27,
+              "printed_number": "19",
+              "text": "Estado dos vidros e Retrovisores D/E"
+            },
+            {
+              "source_row": 28,
+              "printed_number": "20",
+              "text": "Relógio e funcionamento do disco de tacógrafo."
+            },
+            {
+              "source_row": 29,
+              "printed_number": "21",
+              "text": "Tara do Veiculo"
+            },
+            {
+              "source_row": 30,
+              "printed_number": "22",
+              "text": "Faixas refletivas"
+            },
+            {
+              "source_row": 31,
+              "printed_number": "23",
+              "text": "Freio e Freio Estacionário"
+            },
+            {
+              "source_row": 32,
+              "printed_number": "24",
+              "text": "Condições de Bateira / Partida"
+            },
+            {
+              "source_row": 33,
+              "printed_number": "25",
+              "text": "Luzes Direcionais perfeito funcionamento"
+            },
+            {
+              "source_row": 34,
+              "printed_number": "26",
+              "text": "Pisca ALERTA"
+            },
+            {
+              "source_row": 35,
+              "printed_number": "27",
+              "text": "Meia luz"
+            },
+            {
+              "source_row": 36,
+              "printed_number": "28",
+              "text": "Luz baixa"
+            },
+            {
+              "source_row": 37,
+              "printed_number": "29",
+              "text": "Luz alta"
+            },
+            {
+              "source_row": 38,
+              "printed_number": "30",
+              "text": "Luz de Ré, freio,e sirene de Ré"
+            },
+            {
+              "source_row": 39,
+              "printed_number": "31",
+              "text": "Estado das lanternas das luzes."
+            },
+            {
+              "source_row": 40,
+              "printed_number": "32",
+              "text": "Buzina"
+            },
+            {
+              "source_row": 41,
+              "printed_number": "33",
+              "text": "Limpador e Lavador de pára-brisa"
+            },
+            {
+              "source_row": 42,
+              "printed_number": "35",
+              "text": "Escapamento"
+            },
+            {
+              "source_row": 43,
+              "printed_number": "36",
+              "text": "Vazamentos"
+            },
+            {
+              "source_row": 44,
+              "printed_number": "37",
+              "text": "2 Pranchas embarque Maquinas 0,40m x 2,0 m, no minimo 5 cm de espesura."
+            },
+            {
+              "source_row": 45,
+              "printed_number": "38",
+              "text": "4 Cintas para amarrar maquinas"
+            },
+            {
+              "source_row": 46,
+              "printed_number": "39",
+              "text": "8 calços para embarque de Maquinas"
+            },
+            {
+              "source_row": 47,
+              "printed_number": "40",
+              "text": "Identificação de veículos longo"
+            }
+          ]
+        }
+      ],
+      "item_count": 38
+    },
+    {
+      "source_sheet": "MT - Semanal",
+      "source_dimension": "A1:AB54",
+      "code": "MT",
+      "name": "Motoniveladora",
+      "identification_status": "CONFIRMED_FROM_HEADER",
+      "asset_kind": "EQUIPMENT",
+      "source_revision_text": "Revisão 01 ",
+      "identification_fields": [
+        "company",
+        "site",
+        "manufacture_year",
+        "predominant_color",
+        "asset_code",
+        "ownership_type",
+        "responsible_person_name",
+        "driver_license_number",
+        "driver_license_expiry_date",
+        "manufacturer"
+      ],
+      "response_options": [
+        "C",
+        "NC",
+        "NA"
+      ],
+      "sections": [
+        {
+          "key": "general",
+          "title": "Itens gerais",
+          "source_row": null,
+          "items": [
+            {
+              "source_row": 10,
+              "printed_number": "1",
+              "text": "Carteira de habilitação"
+            },
+            {
+              "source_row": 11,
+              "printed_number": "2",
+              "text": "Crachá de Identificação"
+            },
+            {
+              "source_row": 12,
+              "printed_number": "3",
+              "text": "Pneus Dianteiros "
+            },
+            {
+              "source_row": 13,
+              "printed_number": "4",
+              "text": "Pneus Traseiros"
+            },
+            {
+              "source_row": 14,
+              "printed_number": "5",
+              "text": "Porca / Parafusos/Trincasdas Rodas"
+            },
+            {
+              "source_row": 15,
+              "printed_number": "6",
+              "text": "Estado da lataria (parte externa)"
+            },
+            {
+              "source_row": 16,
+              "printed_number": "7",
+              "text": "Macaco/chave de roda/Triângulo"
+            },
+            {
+              "source_row": 17,
+              "printed_number": "8",
+              "text": "Extintor validade"
+            },
+            {
+              "source_row": 18,
+              "printed_number": "9",
+              "text": "Suporte do extintor"
+            },
+            {
+              "source_row": 19,
+              "printed_number": "10",
+              "text": "Estado dos pedais "
+            },
+            {
+              "source_row": 20,
+              "printed_number": "11",
+              "text": "Quebra sol"
+            },
+            {
+              "source_row": 21,
+              "printed_number": "12",
+              "text": "Teto/Assoalho/Parredes (Parte Interna)"
+            },
+            {
+              "source_row": 22,
+              "printed_number": "13",
+              "text": "Estado dos bancos"
+            },
+            {
+              "source_row": 23,
+              "printed_number": "14",
+              "text": "Cintos de Segurança "
+            },
+            {
+              "source_row": 24,
+              "printed_number": "15",
+              "text": "Estribos"
+            },
+            {
+              "source_row": 25,
+              "printed_number": "16",
+              "text": "Estado dos vidros Retrovisores D/E"
+            },
+            {
+              "source_row": 26,
+              "printed_number": "17",
+              "text": "Suporte de garrafas"
+            },
+            {
+              "source_row": 27,
+              "printed_number": "18",
+              "text": "Protetor da lamina do alternador "
+            },
+            {
+              "source_row": 28,
+              "printed_number": "19",
+              "text": "Protetor da bateria"
+            },
+            {
+              "source_row": 29,
+              "printed_number": "20",
+              "text": "Proteção do cardã"
+            },
+            {
+              "source_row": 30,
+              "printed_number": "21",
+              "text": "Partes Moveis e Pontiagudas"
+            },
+            {
+              "source_row": 31,
+              "printed_number": "22",
+              "text": "Condições da Bateira / Partida"
+            },
+            {
+              "source_row": 32,
+              "printed_number": "23",
+              "text": "Pisca dianteiro direito"
+            },
+            {
+              "source_row": 33,
+              "printed_number": "24",
+              "text": "Pisca dianteiro esquerdo"
+            },
+            {
+              "source_row": 34,
+              "printed_number": "25",
+              "text": "Pisca traseiro direito"
+            },
+            {
+              "source_row": 35,
+              "printed_number": "26",
+              "text": "Pisca traseiro esquerdo"
+            },
+            {
+              "source_row": 36,
+              "printed_number": "27",
+              "text": "Pisca ALERTA"
+            },
+            {
+              "source_row": 37,
+              "printed_number": "28",
+              "text": "Meia luz"
+            },
+            {
+              "source_row": 38,
+              "printed_number": "29",
+              "text": "Luz baixa"
+            },
+            {
+              "source_row": 39,
+              "printed_number": "30",
+              "text": "Luz alta"
+            },
+            {
+              "source_row": 40,
+              "printed_number": "31",
+              "text": "Luz de Ré, freio,e sirene de Ré"
+            },
+            {
+              "source_row": 41,
+              "printed_number": "32",
+              "text": "Estado das lanternas das luzes."
+            },
+            {
+              "source_row": 42,
+              "printed_number": "33",
+              "text": "Buzina"
+            },
+            {
+              "source_row": 43,
+              "printed_number": "34",
+              "text": "Freio e Freio Estacionário"
+            },
+            {
+              "source_row": 44,
+              "printed_number": "35",
+              "text": "Limpador e Lavador de pára-brisa"
+            },
+            {
+              "source_row": 45,
+              "printed_number": "37",
+              "text": "Escapamento"
+            },
+            {
+              "source_row": 46,
+              "printed_number": "38",
+              "text": "Vazamentos"
+            }
+          ]
+        }
+      ],
+      "item_count": 37
+    },
+    {
+      "source_sheet": "TP - Semanal",
+      "source_dimension": "A1:AB55",
+      "code": "TP",
+      "name": "Trator de pneu",
+      "identification_status": "CONFIRMED_FROM_HEADER",
+      "asset_kind": "EQUIPMENT",
+      "source_revision_text": "Revisão 01 ",
+      "identification_fields": [
+        "company",
+        "site",
+        "manufacture_year",
+        "predominant_color",
+        "asset_code",
+        "ownership_type",
+        "responsible_person_name",
+        "driver_license_number",
+        "driver_license_expiry_date",
+        "manufacturer"
+      ],
+      "response_options": [
+        "C",
+        "NC",
+        "NA"
+      ],
+      "sections": [
+        {
+          "key": "general",
+          "title": "Itens gerais",
+          "source_row": null,
+          "items": [
+            {
+              "source_row": 10,
+              "printed_number": "1",
+              "text": "Carteira de habilitação"
+            },
+            {
+              "source_row": 11,
+              "printed_number": "2",
+              "text": "Crachá de Identificação"
+            },
+            {
+              "source_row": 12,
+              "printed_number": "3",
+              "text": "Pneus Dianteiros "
+            },
+            {
+              "source_row": 13,
+              "printed_number": "4",
+              "text": "Pneus Traseiros"
+            },
+            {
+              "source_row": 14,
+              "printed_number": "5",
+              "text": "Porca / Parafusos/Trincasdas Rodas"
+            },
+            {
+              "source_row": 15,
+              "printed_number": "6",
+              "text": "Estado da lataria (parte externa)"
+            },
+            {
+              "source_row": 16,
+              "printed_number": "8",
+              "text": "Contra-peso"
+            },
+            {
+              "source_row": 17,
+              "printed_number": "9",
+              "text": "Extintor validade"
+            },
+            {
+              "source_row": 18,
+              "printed_number": "10",
+              "text": "Suporte do extintor"
+            },
+            {
+              "source_row": 19,
+              "printed_number": "11",
+              "text": "Estado dos pedais "
+            },
+            {
+              "source_row": 20,
+              "printed_number": "12",
+              "text": "Quebra sol"
+            },
+            {
+              "source_row": 21,
+              "printed_number": "13",
+              "text": "Teto/Assoalho/Parredes (Parte Interna)"
+            },
+            {
+              "source_row": 22,
+              "printed_number": "14",
+              "text": "Estado dos bancos"
+            },
+            {
+              "source_row": 23,
+              "printed_number": "15",
+              "text": "Cintos de Segurança "
+            },
+            {
+              "source_row": 24,
+              "printed_number": "16",
+              "text": "Estribos"
+            },
+            {
+              "source_row": 25,
+              "printed_number": "17",
+              "text": "Estado dos vidros Retrovisores D/E"
+            },
+            {
+              "source_row": 26,
+              "printed_number": "18",
+              "text": "Suporte de garrafas"
+            },
+            {
+              "source_row": 27,
+              "printed_number": "19",
+              "text": "Protetor da lamina do alternador "
+            },
+            {
+              "source_row": 28,
+              "printed_number": "20",
+              "text": "Protetor da bateria"
+            },
+            {
+              "source_row": 29,
+              "printed_number": "21",
+              "text": "Proteção do cardã"
+            },
+            {
+              "source_row": 30,
+              "printed_number": "22",
+              "text": "Partes Moveis e Pontiagudas"
+            },
+            {
+              "source_row": 31,
+              "printed_number": "23",
+              "text": "Condições de Bateria / Partida"
+            },
+            {
+              "source_row": 32,
+              "printed_number": "24",
+              "text": "Pisca dianteiro direito"
+            },
+            {
+              "source_row": 33,
+              "printed_number": "25",
+              "text": "Pisca dianteiro esquerdo"
+            },
+            {
+              "source_row": 34,
+              "printed_number": "26",
+              "text": "Pisca traseiro direito"
+            },
+            {
+              "source_row": 35,
+              "printed_number": "27",
+              "text": "Pisca traseiro esquerdo"
+            },
+            {
+              "source_row": 36,
+              "printed_number": "28",
+              "text": "Pisca ALERTA"
+            },
+            {
+              "source_row": 37,
+              "printed_number": "29",
+              "text": "Meia luz"
+            },
+            {
+              "source_row": 38,
+              "printed_number": "30",
+              "text": "Luz baixa"
+            },
+            {
+              "source_row": 39,
+              "printed_number": "31",
+              "text": "Luz alta"
+            },
+            {
+              "source_row": 40,
+              "printed_number": "32",
+              "text": "Luz de Ré, freio,e sirene de Ré"
+            },
+            {
+              "source_row": 41,
+              "printed_number": "33",
+              "text": "Estado das lanternas das luzes."
+            },
+            {
+              "source_row": 42,
+              "printed_number": "34",
+              "text": "Buzina"
+            },
+            {
+              "source_row": 43,
+              "printed_number": "35",
+              "text": "Freio e Freio Estacionário"
+            },
+            {
+              "source_row": 44,
+              "printed_number": "36",
+              "text": "Limpador e Lavador de pára-brisa"
+            },
+            {
+              "source_row": 45,
+              "printed_number": "38",
+              "text": "Escapamento"
+            },
+            {
+              "source_row": 46,
+              "printed_number": "39",
+              "text": "Vazamentos"
+            }
+          ]
+        }
+      ],
+      "item_count": 37
+    },
+    {
+      "source_sheet": "TE - Semanal",
+      "source_dimension": "A1:Y56",
+      "code": "TE",
+      "name": null,
+      "identification_status": "PENDING_CONFIRMATION",
+      "asset_kind": "EQUIPMENT",
+      "source_revision_text": "Revisão 01 ",
+      "identification_fields": [
+        "company",
+        "site",
+        "manufacture_year",
+        "predominant_color",
+        "asset_code",
+        "ownership_type",
+        "responsible_person_name",
+        "driver_license_number",
+        "driver_license_expiry_date",
+        "manufacturer"
+      ],
+      "response_options": [
+        "C",
+        "NC",
+        "NA"
+      ],
+      "sections": [
+        {
+          "key": "general",
+          "title": "Itens gerais",
+          "source_row": null,
+          "items": [
+            {
+              "source_row": 10,
+              "printed_number": "1",
+              "text": "Carteira de habilitação"
+            },
+            {
+              "source_row": 11,
+              "printed_number": "2",
+              "text": "Crachá de Identificação"
+            },
+            {
+              "source_row": 12,
+              "printed_number": "3",
+              "text": "Estado da lataria (parte externa)"
+            },
+            {
+              "source_row": 13,
+              "printed_number": "4",
+              "text": "Extintor Validade"
+            },
+            {
+              "source_row": 14,
+              "printed_number": "5",
+              "text": "Suporte do extintor"
+            },
+            {
+              "source_row": 15,
+              "printed_number": "6",
+              "text": "Estado dos pedais "
+            },
+            {
+              "source_row": 16,
+              "printed_number": "7",
+              "text": "Quebra sol"
+            },
+            {
+              "source_row": 17,
+              "printed_number": "8",
+              "text": "Teto/Assoalho/Parredes (Parte Interna)"
+            },
+            {
+              "source_row": 18,
+              "printed_number": "9",
+              "text": "Estado dos bancos"
+            },
+            {
+              "source_row": 19,
+              "printed_number": "10",
+              "text": "Cinto de Segurança "
+            },
+            {
+              "source_row": 20,
+              "printed_number": "11",
+              "text": "Estado dos Retrovisores "
+            },
+            {
+              "source_row": 21,
+              "printed_number": "12",
+              "text": "Suporte de garrafas"
+            },
+            {
+              "source_row": 22,
+              "printed_number": "13",
+              "text": "Protetor da bateria"
+            },
+            {
+              "source_row": 23,
+              "printed_number": "15",
+              "text": "Proteção da Mola da esteira"
+            },
+            {
+              "source_row": 24,
+              "printed_number": "16",
+              "text": "Condições de Partida / Bateria"
+            },
+            {
+              "source_row": 25,
+              "printed_number": "17",
+              "text": "Pisca dianteiro direito"
+            },
+            {
+              "source_row": 26,
+              "printed_number": "18",
+              "text": "Pisca dianteiro esquerdo"
+            },
+            {
+              "source_row": 27,
+              "printed_number": "19",
+              "text": "Pisca traseiro direito"
+            },
+            {
+              "source_row": 28,
+              "printed_number": "20",
+              "text": "Pisca traseiro esquerdo"
+            },
+            {
+              "source_row": 29,
+              "printed_number": "21",
+              "text": "Pisca ALERTA"
+            },
+            {
+              "source_row": 30,
+              "printed_number": "22",
+              "text": "Farol dianteiro e traseiro"
+            },
+            {
+              "source_row": 31,
+              "printed_number": "23",
+              "text": "Meia luz"
+            },
+            {
+              "source_row": 32,
+              "printed_number": "24",
+              "text": "Luz baixa"
+            },
+            {
+              "source_row": 33,
+              "printed_number": "25",
+              "text": "Luz alta"
+            },
+            {
+              "source_row": 34,
+              "printed_number": "26",
+              "text": "Luz de Ré, freio,e sirene de Ré"
+            },
+            {
+              "source_row": 35,
+              "printed_number": "27",
+              "text": "Estado das lanternas das luzes."
+            },
+            {
+              "source_row": 36,
+              "printed_number": "28",
+              "text": "Buzina"
+            },
+            {
+              "source_row": 37,
+              "printed_number": "29",
+              "text": "Freio e Freio Estacionário"
+            },
+            {
+              "source_row": 38,
+              "printed_number": "31",
+              "text": "Escapamento"
+            },
+            {
+              "source_row": 39,
+              "printed_number": "32",
+              "text": "Vazamentos Óleo"
+            },
+            {
+              "source_row": 40,
+              "printed_number": "33",
+              "text": "Contra-pinos da Lamina "
+            },
+            {
+              "source_row": 41,
+              "printed_number": "34",
+              "text": "EPI'S DO OPERADOR"
+            },
+            {
+              "source_row": 42,
+              "printed_number": "35",
+              "text": "Indicador de Temperatura"
+            },
+            {
+              "source_row": 43,
+              "printed_number": "36",
+              "text": "Indicador de Óleo Combustível"
+            },
+            {
+              "source_row": 44,
+              "printed_number": "37",
+              "text": "Alavancas de Comando"
+            },
+            {
+              "source_row": 45,
+              "printed_number": "38",
+              "text": "Escada de Acesso"
+            },
+            {
+              "source_row": 46,
+              "printed_number": "39",
+              "text": "Parabrisas e Vidros Laterais"
+            },
+            {
+              "source_row": 47,
+              "printed_number": "40",
+              "text": "Limpador de Parabrisa"
+            }
+          ]
+        }
+      ],
+      "item_count": 38
+    },
+    {
+      "source_sheet": "PC - Semanal",
+      "source_dimension": "A1:X55",
+      "code": "PC",
+      "name": "Pá carregadeira",
+      "identification_status": "CONFIRMED_FROM_HEADER",
+      "asset_kind": "EQUIPMENT",
+      "source_revision_text": "Revisão 01 ",
+      "identification_fields": [
+        "company",
+        "site",
+        "manufacture_year",
+        "predominant_color",
+        "asset_code",
+        "ownership_type",
+        "responsible_person_name",
+        "driver_license_number",
+        "driver_license_expiry_date",
+        "manufacturer"
+      ],
+      "response_options": [
+        "C",
+        "NC",
+        "NA"
+      ],
+      "sections": [
+        {
+          "key": "general",
+          "title": "Itens gerais",
+          "source_row": null,
+          "items": [
+            {
+              "source_row": 10,
+              "printed_number": "1",
+              "text": "Carteira de habilitação"
+            },
+            {
+              "source_row": 11,
+              "printed_number": "2",
+              "text": "Crachá de Identificação"
+            },
+            {
+              "source_row": 12,
+              "printed_number": "3",
+              "text": "Pneus Dianteiros "
+            },
+            {
+              "source_row": 13,
+              "printed_number": "4",
+              "text": "Pneus Traseiros"
+            },
+            {
+              "source_row": 14,
+              "printed_number": "5",
+              "text": "Porca / Parafusos/Trincas das Rodas"
+            },
+            {
+              "source_row": 15,
+              "printed_number": "6",
+              "text": "Estado da lataria (parte externa)"
+            },
+            {
+              "source_row": 16,
+              "printed_number": "7",
+              "text": "Extintor Validade"
+            },
+            {
+              "source_row": 17,
+              "printed_number": "8",
+              "text": "Suporte do extintor"
+            },
+            {
+              "source_row": 18,
+              "printed_number": "9",
+              "text": "Estado dos pedais "
+            },
+            {
+              "source_row": 19,
+              "printed_number": "10",
+              "text": "Quebra sol"
+            },
+            {
+              "source_row": 20,
+              "printed_number": "11",
+              "text": "Teto/Assoalho/Parredes (Parte Interna)"
+            },
+            {
+              "source_row": 21,
+              "printed_number": "12",
+              "text": "Estado dos bancos"
+            },
+            {
+              "source_row": 22,
+              "printed_number": "13",
+              "text": "Cintos de Segurança "
+            },
+            {
+              "source_row": 23,
+              "printed_number": "14",
+              "text": "Estado dos Retrovisores "
+            },
+            {
+              "source_row": 24,
+              "printed_number": "15",
+              "text": "Suporte de garrafas"
+            },
+            {
+              "source_row": 25,
+              "printed_number": "16",
+              "text": "Protetor da bateria"
+            },
+            {
+              "source_row": 26,
+              "printed_number": "17",
+              "text": "Partes Moveis e Pontiagudas"
+            },
+            {
+              "source_row": 27,
+              "printed_number": "18",
+              "text": "Partida"
+            },
+            {
+              "source_row": 28,
+              "printed_number": "19",
+              "text": "Pisca dianteiro direito"
+            },
+            {
+              "source_row": 29,
+              "printed_number": "20",
+              "text": "Pisca dianteiro esquerdo"
+            },
+            {
+              "source_row": 30,
+              "printed_number": "21",
+              "text": "Pisca traseiro direito"
+            },
+            {
+              "source_row": 31,
+              "printed_number": "22",
+              "text": "Pisca traseiro esquerdo"
+            },
+            {
+              "source_row": 32,
+              "printed_number": "23",
+              "text": "Pisca ALERTA"
+            },
+            {
+              "source_row": 33,
+              "printed_number": "24",
+              "text": "Farol dianteiro e traseiro"
+            },
+            {
+              "source_row": 34,
+              "printed_number": "25",
+              "text": "Meia luz"
+            },
+            {
+              "source_row": 35,
+              "printed_number": "26",
+              "text": "Luz baixa"
+            },
+            {
+              "source_row": 36,
+              "printed_number": "27",
+              "text": "Luz alta"
+            },
+            {
+              "source_row": 37,
+              "printed_number": "28",
+              "text": "Luz de Ré, freio,e sirene de Ré"
+            },
+            {
+              "source_row": 38,
+              "printed_number": "29",
+              "text": "Estado das lanternas das luzes."
+            },
+            {
+              "source_row": 39,
+              "printed_number": "30",
+              "text": "Buzina"
+            },
+            {
+              "source_row": 40,
+              "printed_number": "31",
+              "text": "Freio e Freio Estacionário"
+            },
+            {
+              "source_row": 41,
+              "printed_number": "32",
+              "text": "Limpador e Lavador de pára-brisa"
+            },
+            {
+              "source_row": 42,
+              "printed_number": "34",
+              "text": "Escapamento"
+            },
+            {
+              "source_row": 43,
+              "printed_number": "35",
+              "text": "Vazamentos"
+            },
+            {
+              "source_row": 44,
+              "printed_number": "36",
+              "text": "Coletor de Resíduos/ Lona"
+            },
+            {
+              "source_row": 45,
+              "printed_number": "37",
+              "text": "EPI'S DO OPERADOR"
+            },
+            {
+              "source_row": 46,
+              "printed_number": "38",
+              "text": "Estribos de acesso"
+            },
+            {
+              "source_row": 47,
+              "printed_number": "39",
+              "text": "Mangueiras Hidraulicas"
+            }
+          ]
+        }
+      ],
+      "item_count": 38
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+import 'package:flutter_appauth/flutter_appauth.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import '../core/config/app_config.dart';
+import '../core/network/authenticated_api_client.dart';
+import '../features/auth/data/oidc_auth_repository.dart';
+import '../features/auth/domain/auth_session.dart';
+import '../features/checklists/application/checklist_service.dart';
+import '../features/checklists/data/drift_checklist_repository.dart';
+import '../features/checklists/data/local/app_database.dart';
+import '../features/checklists/data/local/database_factory.dart';
+import '../features/checklists/data/remote/checklist_api.dart';
+import '../features/checklists/domain/checklist_repository.dart';
+import '../features/sync/application/sync_coordinator.dart';
+import '../features/sync/data/device_identity.dart';
+import '../features/sync/data/sync_api.dart';
+
+final class AppDependencies {
+  AppDependencies._({
+    required this.config,
+    required this.secureStorage,
+    required this.database,
+    required this.auth,
+    required this.checklistRepository,
+    required this.checklistService,
+    required this.checklistApi,
+    required this.syncCoordinator,
+  });
+
+  final AppConfig config;
+  final FlutterSecureStorage secureStorage;
+  final AppDatabase database;
+  final AuthSessionRepository auth;
+  final ChecklistRepository checklistRepository;
+  final ChecklistService checklistService;
+  final ChecklistApi checklistApi;
+  final SyncCoordinator syncCoordinator;
+
+  static Future<AppDependencies> create() async {
+    final config = AppConfig.fromEnvironment();
+    const secureStorage = FlutterSecureStorage();
+    final database = await DatabaseFactory.open(secureStorage);
+    final auth = OidcAuthRepository(
+      config: config,
+      secureStorage: secureStorage,
+      appAuth: const FlutterAppAuth(),
+    );
+    final client = AuthenticatedApiClient(config: config, auth: auth);
+    final checklistRepository = DriftChecklistRepository(database);
+    final checklistService = ChecklistService(checklistRepository);
+    final checklistApi = ChecklistApi(client);
+    final syncCoordinator = SyncCoordinator(
+      database: database,
+      syncApi: SyncApi(client),
+      checklistApi: checklistApi,
+      checklistRepository: checklistRepository,
+      deviceIdentity: DeviceIdentity(secureStorage),
+    );
+    await syncCoordinator.initialize();
+    return AppDependencies._(
+      config: config,
+      secureStorage: secureStorage,
+      database: database,
+      auth: auth,
+      checklistRepository: checklistRepository,
+      checklistService: checklistService,
+      checklistApi: checklistApi,
+      syncCoordinator: syncCoordinator,
+    );
+  }
+
+  Future<void> dispose() async {
+    await syncCoordinator.dispose();
+    await database.close();
+  }
+}

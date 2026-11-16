@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, CloudOff, Plus } from "lucide-react";
+import { AlertTriangle, ArrowRight, Plus } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { ButtonLink } from "@/components/ui/button";
 import { Status } from "@/components/ui/status";
@@ -45,7 +45,6 @@ export default async function DashboardPage() {
       </section>
       <aside style={{display:"grid",gap:16}}>
         <section className="panel"><div className="panel-header"><div><h2 className="panel-title">Sinais de atenção</h2><div className="panel-subtitle">Sem inferências operacionais</div></div></div><div className="panel-body" style={{display:"grid",gap:12}}>
-          <div className="notice notice-amber"><CloudOff /> <div><strong>Ausência não confirma atraso.</strong><br />Uma inspeção pode estar aguardando envio no aparelho.</div></div>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><span>Conflitos abertos</span><Status value={conflicts.length ? "CONFLICT" : "ACTIVE"} label={String(conflicts.length)} /></div>
           {conflicts.length ? <ButtonLink href="/conflitos" variant="secondary"><AlertTriangle />Resolver conflitos</ButtonLink> : null}
         </div></section>

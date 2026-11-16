@@ -88,26 +88,6 @@ class _WeekScreenState extends State<WeekScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
             children: [
               _WeekHeader(week: week),
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: FieldColors.steelSoft,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.phone_android, color: FieldColors.steel),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Cada data é independente. Uma inspeção concluída pode ser enviada enquanto outra continua em rascunho.',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
               const SizedBox(height: 24),
               Text(
                 'Datas da semana',
@@ -135,6 +115,15 @@ class _WeekScreenState extends State<WeekScreen> {
                 ),
                 const SizedBox(height: 8),
               ],
+              const SizedBox(height: 20),
+              const Text(
+                'Desenvolvido pelo setor de TI',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: FieldColors.notApplicable,
+                  fontSize: 11,
+                ),
+              ),
             ],
           ),
         );

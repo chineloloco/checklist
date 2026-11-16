@@ -13,13 +13,14 @@ export default async function LoginPage() {
   const credentialsEnabled = process.env.AUTH_ALLOW_CREDENTIALS === "true";
   return <main className="login-page">
     <section className="login-panel">
-      <div className="login-brand"><span className="brand-mark">C</span> Checklists operacionais</div>
+      <div className="login-brand"><span className="brand-mark">CL</span> Checkpoint</div>
       <div className="login-copy">
         <div className="page-kicker">Acesso à operação</div>
         <h1>A semana inteira, sem perder uma inspeção.</h1>
         <p>Consulte versões, acompanhe datas esperadas e resolva conflitos de dispositivos sem apagar o histórico.</p>
         <Suspense><LoginForm oidcEnabled={oidcEnabled} credentialsEnabled={credentialsEnabled} /></Suspense>
       </div>
+      <footer className="login-footer">Desenvolvido pelo setor de TI</footer>
     </section>
     <aside className="login-side" aria-hidden="true">
       <div className="login-ledger">

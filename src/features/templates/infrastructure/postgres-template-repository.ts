@@ -13,7 +13,7 @@ import {
   weeklyChecklists
 } from "@/infrastructure/db/schema";
 import { conflict, notFound, validationFailed } from "@/shared/domain/errors";
-import type { CreateTemplateInput, UpdateTemplateVersionInput } from "@/features/templates/domain/template";
+import type { CreateTemplateInput, UpdateTemplateMetadataInput, UpdateTemplateVersionInput } from "@/features/templates/domain/template";
 
 type Context = { organizationId: string; userId: string };
 
@@ -151,6 +151,33 @@ export class PostgresTemplateRepository {
       });
     });
     return this.version(context, versionId);
+  }
+
+  async updateMetadata(context: Context, templateId: string, input: UpdateTemplateMetadataInput) {
+    return this.database.transaction(async (tx) => {
+      const [template] = await tx
+        .select()
+        .from(checklistTemplates)
+        .where(and(eq(checklistTemplates.id, templateId), eq(checklistTemplates.organizationId, context.organizationId)))
+        .limit(1);
+      if (!template) throw notFound("Modelo não encontrado.");
+      if (template.status === "ARCHIVED") throw conflict("TEMPLATE_ARCHIVED", "Modelos arquivados não podem ser alterados.");
+
+      const [updated] = await tx
+        .update(checklistTemplates)
+        .set({ name: input.name, identificationStatus: "CONFIRMED", updatedAt: new Date() })
+        .where(eq(checklistTemplates.id, templateId))
+        .returning();
+      await tx.insert(auditEvents).values({
+        organizationId: context.organizationId,
+        entityType: "TEMPLATE",
+        entityId: templateId,
+        action: "IDENTIFICATION_CONFIRMED",
+        actorUserId: context.userId,
+        metadata: { previousName: template.name, name: input.name }
+      });
+      return updated;
+    });
   }
 
   async createVersion(context: Context, templateId: string, basedOnVersionId: string) {

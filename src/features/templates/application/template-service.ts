@@ -1,5 +1,5 @@
 import type { AuthContext } from "@/features/auth/application/auth-context";
-import type { CreateTemplateInput, UpdateTemplateVersionInput } from "@/features/templates/domain/template";
+import type { CreateTemplateInput, UpdateTemplateMetadataInput, UpdateTemplateVersionInput } from "@/features/templates/domain/template";
 import { PostgresTemplateRepository } from "@/features/templates/infrastructure/postgres-template-repository";
 
 export class TemplateService {
@@ -18,6 +18,9 @@ export class TemplateService {
   }
   updateDraft(context: AuthContext, versionId: string, input: UpdateTemplateVersionInput) {
     return this.repository.updateDraft(context, versionId, input);
+  }
+  updateMetadata(context: AuthContext, templateId: string, input: UpdateTemplateMetadataInput) {
+    return this.repository.updateMetadata(context, templateId, input);
   }
   createVersion(context: AuthContext, templateId: string, basedOnVersionId: string) {
     return this.repository.createVersion(context, templateId, basedOnVersionId);

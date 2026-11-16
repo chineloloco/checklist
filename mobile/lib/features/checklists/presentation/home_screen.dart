@@ -315,6 +315,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 12),
                     ],
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Desenvolvido pelo setor de TI',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: FieldColors.notApplicable,
+                      fontSize: 11,
+                    ),
+                  ),
                 ],
               ),
             );

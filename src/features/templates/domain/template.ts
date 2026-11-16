@@ -29,5 +29,10 @@ export const updateTemplateVersionSchema = z.object({
   baseRevision: z.number().int().min(1)
 });
 
+export const updateTemplateMetadataSchema = z.object({
+  name: z.string().trim().min(2).max(200)
+});
+
 export type CreateTemplateInput = z.infer<typeof createTemplateSchema>;
 export type UpdateTemplateVersionInput = z.infer<typeof updateTemplateVersionSchema>;
+export type UpdateTemplateMetadataInput = z.infer<typeof updateTemplateMetadataSchema>;

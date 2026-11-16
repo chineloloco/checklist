@@ -13,8 +13,8 @@ export default async function PlatformLayout({ children }: { children: React.Rea
   return <div className="app-frame">
     <aside className="sidebar">
       <Link className="brand-lockup" href="/">
-        <span className="brand-mark">C</span>
-        <span className="brand-copy"><span className="brand-name">Checklists</span><span className="brand-meta">Operação semanal</span></span>
+        <span className="brand-mark">CL</span>
+        <span className="brand-copy"><span className="brand-name">Checkpoint</span><span className="brand-meta">Operação semanal</span></span>
       </Link>
       <AppNav />
       <div className="sidebar-foot">
@@ -23,6 +23,6 @@ export default async function PlatformLayout({ children }: { children: React.Rea
         <SignOutButton />
       </div>
     </aside>
-    <main className="main"><div className="content">{children}</div></main>
+    <main className="main"><div className="content">{children}</div><footer className="app-footer">Desenvolvido pelo setor de TI</footer></main>
   </div>;
 }

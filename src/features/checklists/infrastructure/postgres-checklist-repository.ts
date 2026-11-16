@@ -32,6 +32,7 @@ import type {
   OpenWeeklyChecklistInput,
   UpdateInspectionInput
 } from "@/features/checklists/domain/inspection";
+import { inspectionAttachmentSchema } from "@/features/checklists/domain/inspection";
 
 type RequestContext = {
   organizationId: string;
@@ -601,7 +602,10 @@ export class PostgresChecklistRepository {
         lifecycleStatus: inspections.lifecycleStatus,
         revision: inspections.currentRevision,
         conflict: inspections.isConflictCandidate,
-        revisionId: inspectionRevisions.id
+        revisionId: inspectionRevisions.id,
+        identification: inspectionRevisions.identificationSnapshot,
+        observations: inspectionRevisions.observations,
+        attachments: inspectionRevisions.changes
       })
       .from(inspections)
       .innerJoin(inspectionSlots, eq(inspectionSlots.id, inspections.slotId))
@@ -675,6 +679,14 @@ export class PostgresChecklistRepository {
         lifecycleStatus: row.lifecycleStatus,
         revision: row.revision,
         conflict: row.conflict,
+        identification: row.identification,
+        observations: row.observations,
+        attachments: row.attachments.flatMap((attachment) => {
+          const parsed = inspectionAttachmentSchema.safeParse(attachment);
+          return parsed.success
+            ? [{ id: parsed.data.id, mediaType: parsed.data.mediaType, fileName: parsed.data.fileName }]
+            : [];
+        }),
         required: requiredSlots.some(
           (slot) => slot.localDate === row.localDate && slot.occurrenceNo === row.occurrenceNo
         )

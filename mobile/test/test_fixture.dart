@@ -12,10 +12,10 @@ const assetId = '10000000-0000-4000-8000-000000000004';
 const configId = '10000000-0000-4000-8000-000000000005';
 
 Future<List<Map<String, Object?>>> realVlItems() async {
-  final catalog = (jsonDecode(
-    await File('assets/template-catalog.json').readAsString(),
-  ) as Map)
-      .cast<String, Object?>();
+  final catalog =
+      (jsonDecode(await File('assets/template-catalog.json').readAsString())
+              as Map)
+          .cast<String, Object?>();
   final templates = (catalog['templates']! as List).cast<Map>();
   final vl = templates
       .map((item) => item.cast<String, Object?>())
@@ -27,8 +27,8 @@ Future<List<Map<String, Object?>>> realVlItems() async {
       {
         'id': '20000000-0000-4000-8000-${index.toString().padLeft(12, '0')}',
         'sourcePrintedNumber': items[index]['printed_number'],
-        'text': items[index]['text'],
-        'order': index,
+        'originalText': items[index]['text'],
+        'sortOrder': index,
         'requiredOnComplete': true,
         'requireObservationWhenNc': false,
         'requirePhotoWhenNc': false,
@@ -52,11 +52,18 @@ Future<void> seedVlBootstrap(DriftChecklistRepository repository) async {
         'revision': 1,
         'checksum': 'sha256:test-vl',
         'publishedAt': DateTime.now().toUtc().toIso8601String(),
+        'template': {
+          'id': templateId,
+          'code': 'VL',
+          'name': 'Veículos leves',
+          'assetKind': 'VEHICLE',
+          'status': 'ACTIVE',
+        },
         'sections': [
           {
             'id': sectionId,
             'title': 'Itens gerais',
-            'order': 0,
+            'sortOrder': 0,
             'items': items,
           },
         ],
@@ -78,6 +85,31 @@ Future<void> seedVlBootstrap(DriftChecklistRepository repository) async {
         'ownershipType': 'OWN',
       },
     ],
+    'companies': [
+      {
+        'id': '10000000-0000-4000-8000-000000000020',
+        'name': 'Empresa Exemplo',
+        'active': true,
+      },
+    ],
+    'sites': [
+      {
+        'id': '10000000-0000-4000-8000-000000000021',
+        'companyId': '10000000-0000-4000-8000-000000000020',
+        'name': 'Pátio Norte',
+        'active': true,
+      },
+    ],
+    'people': [
+      {
+        'id': '10000000-0000-4000-8000-000000000022',
+        'name': 'João da Silva',
+        'kind': 'DRIVER',
+        'driverLicenseNumber': '00000000000',
+        'driverLicenseExpiryDate': '2028-05-20',
+        'active': true,
+      },
+    ],
     'operationConfigs': [
       {
         'id': configId,
@@ -86,6 +118,15 @@ Future<void> seedVlBootstrap(DriftChecklistRepository repository) async {
         'weekStartsOn': 'MONDAY',
         'requiredWeekdays': ['MONDAY', 'WEDNESDAY', 'FRIDAY'],
         'maxOccurrencesPerDate': 1,
+      },
+    ],
+    'assetTemplateAssignments': [
+      {
+        'id': '10000000-0000-4000-8000-000000000006',
+        'assetId': assetId,
+        'templateId': templateId,
+        'operationConfigId': configId,
+        'active': true,
       },
     ],
     'tombstones': <Object?>[],

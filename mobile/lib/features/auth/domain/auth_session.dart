@@ -15,13 +15,14 @@ final class AuthSession {
   final String? subject;
   final String? displayName;
 
-  bool get isExpired =>
-      accessTokenExpiresAt.isBefore(DateTime.now().toUtc().add(const Duration(minutes: 1)));
+  bool get isExpired => accessTokenExpiresAt.isBefore(
+        DateTime.now().toUtc().add(const Duration(minutes: 1)),
+      );
 }
 
 abstract interface class AuthSessionRepository {
   Future<AuthSession?> restore();
-  Future<AuthSession> signIn();
+  Future<AuthSession> signIn({required String email, required String password});
   Future<String> validAccessToken({bool forceRefresh = false});
   Future<void> signOut();
 }

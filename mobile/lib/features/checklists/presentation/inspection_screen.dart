@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../core/errors/app_failure.dart';
 import '../../../core/theme/app_theme.dart';
@@ -23,6 +27,8 @@ class InspectionScreen extends StatefulWidget {
 
 class _InspectionScreenState extends State<InspectionScreen> {
   bool _completing = false;
+  bool _addingPhoto = false;
+  bool _deleting = false;
 
   Future<void> _saveAnswer(
     ChecklistItem item,
@@ -38,75 +44,42 @@ class _InspectionScreenState extends State<InspectionScreen> {
       );
     } on AppFailure catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 
   Future<void> _editObservation(ChecklistItem item) async {
-    final controller = TextEditingController(text: item.observation);
     final value = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Observação · item ${item.sourcePrintedNumber ?? item.order + 1}'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          minLines: 3,
-          maxLines: 7,
-          maxLength: 4000,
-          decoration: const InputDecoration(
-            hintText: 'Descreva a condição encontrada',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Salvar'),
-          ),
-        ],
+      builder: (context) => _TextEditorDialog(
+        title:
+            'Observação · item ${item.sourcePrintedNumber ?? item.order + 1}',
+        initialValue: item.observation,
+        hintText: 'Descreva a condição encontrada',
+        minLines: 3,
+        maxLines: 7,
+        maxLength: 4000,
       ),
     );
-    controller.dispose();
     if (value != null) {
       await _saveAnswer(item, item.result, observation: value);
     }
   }
 
   Future<void> _editGeneralNotes(InspectionDraft draft) async {
-    final controller = TextEditingController(text: draft.observations);
     final value = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Observações da inspeção'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          minLines: 4,
-          maxLines: 8,
-          maxLength: 10000,
-          decoration: const InputDecoration(
-            hintText: 'Informações gerais desta data',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Salvar'),
-          ),
-        ],
+      builder: (context) => _TextEditorDialog(
+        title: 'Observações da inspeção',
+        initialValue: draft.observations,
+        hintText: 'Informações gerais desta data',
+        minLines: 4,
+        maxLines: 8,
+        maxLength: 10000,
       ),
     );
-    controller.dispose();
     if (value != null) {
       await widget.repository.saveInspectionNotes(
         inspectionId: draft.id,
@@ -158,110 +131,290 @@ class _InspectionScreenState extends State<InspectionScreen> {
       );
     } on AppFailure catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
     } finally {
       if (mounted) setState(() => _completing = false);
     }
   }
 
+  Future<void> _addPhoto(InspectionDraft draft) async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Adicionar foto',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: const Text('Tirar foto'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Escolher da galeria'),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (source == null) return;
+    setState(() => _addingPhoto = true);
+    File? savedFile;
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: source,
+        imageQuality: 70,
+        maxWidth: 1600,
+        maxHeight: 1600,
+      );
+      if (picked == null) return;
+      if (await picked.length() > 2500000) {
+        throw const ValidationFailure(
+          'A foto ficou maior que 2,5 MB. Escolha uma imagem menor.',
+        );
+      }
+      final root = await getApplicationDocumentsDirectory();
+      final directory = Directory(
+        '${root.path}${Platform.pathSeparator}inspection_photos'
+        '${Platform.pathSeparator}${draft.id}',
+      );
+      await directory.create(recursive: true);
+      final extension = picked.path.toLowerCase().endsWith('.png')
+          ? 'png'
+          : 'jpg';
+      savedFile = File(
+        '${directory.path}${Platform.pathSeparator}'
+        '${DateTime.now().microsecondsSinceEpoch}.$extension',
+      );
+      await picked.saveTo(savedFile.path);
+      await widget.repository.addPhotoAttachment(
+        inspectionId: draft.id,
+        localPath: savedFile.path,
+        mediaType: extension == 'png' ? 'image/png' : 'image/jpeg',
+      );
+    } on AppFailure catch (error) {
+      if (savedFile != null && await savedFile.exists()) {
+        await savedFile.delete();
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    } on Object catch (_) {
+      if (savedFile != null && await savedFile.exists()) {
+        await savedFile.delete();
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível anexar a foto.')),
+      );
+    } finally {
+      if (mounted) setState(() => _addingPhoto = false);
+    }
+  }
+
+  Future<void> _removePhoto(
+    InspectionDraft draft,
+    InspectionAttachment attachment,
+  ) async {
+    try {
+      await widget.repository.removeAttachment(
+        inspectionId: draft.id,
+        attachmentId: attachment.id,
+      );
+    } on AppFailure catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
+  Future<void> _deleteInspection(InspectionDraft draft) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir este formulário?'),
+        content: const Text(
+          'As respostas e fotos salvas somente neste aparelho serão apagadas. '
+          'Esta ação não pode ser desfeita.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: FieldColors.nonCompliant,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.delete_outline),
+            label: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _deleting = true);
+    try {
+      await widget.repository.deleteUnsyncedInspection(draft.id);
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } on AppFailure catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+      setState(() => _deleting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => StreamBuilder<InspectionDraft>(
-        stream: widget.repository.watchInspection(widget.inspectionId),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return Scaffold(
-              appBar: AppBar(),
-              body: Center(
-                child: snapshot.hasError
-                    ? Text(snapshot.error.toString())
-                    : const CircularProgressIndicator(),
+    stream: widget.repository.watchInspection(widget.inspectionId),
+    builder: (context, snapshot) {
+      if (!snapshot.hasData) {
+        return Scaffold(
+          appBar: AppBar(),
+          body: Center(
+            child: snapshot.hasError
+                ? Text(snapshot.error.toString())
+                : const CircularProgressIndicator(),
+          ),
+        );
+      }
+      final draft = snapshot.requireData;
+      final readOnly = draft.lifecycle != InspectionLifecycle.draft;
+      return Scaffold(
+        appBar: AppBar(
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                DateFormat(
+                  "EEEE, dd 'de' MMMM",
+                  'pt_BR',
+                ).format(draft.localDate),
               ),
-            );
-          }
-          final draft = snapshot.requireData;
-          final readOnly = draft.lifecycle != InspectionLifecycle.draft;
-          return Scaffold(
-            appBar: AppBar(
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(DateFormat("EEEE, dd 'de' MMMM", 'pt_BR')
-                      .format(draft.localDate)),
-                  Text(
-                    'VL · versão ${draft.templateVersionNumber} fixada',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
-                  ),
-                ],
+              Text(
+                '${draft.templateDisplayName} · versão ${draft.templateVersionNumber} fixada',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                ),
               ),
-            ),
-            bottomNavigationBar: readOnly
-                ? null
-                : SafeArea(
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-                      decoration: const BoxDecoration(
-                        color: FieldColors.surface,
-                        border: Border(top: BorderSide(color: FieldColors.line)),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => Navigator.pop(context),
-                              icon: const Icon(Icons.save_outlined),
-                              label: const Text('Continuar depois'),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: FilledButton.icon(
-                              onPressed: _completing ? null : () => _complete(draft),
-                              icon: _completing
-                                  ? const SizedBox.square(
-                                      dimension: 18,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    )
-                                  : const Icon(Icons.task_alt),
-                              label: const Text('Concluir'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+            ],
+          ),
+        ),
+        bottomNavigationBar: readOnly
+            ? null
+            : SafeArea(
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+                  decoration: const BoxDecoration(
+                    color: FieldColors.surface,
+                    border: Border(top: BorderSide(color: FieldColors.line)),
                   ),
-            body: ListView(
-              padding: EdgeInsets.fromLTRB(16, 8, 16, readOnly ? 32 : 120),
-              children: [
-                _InspectionProgress(draft: draft),
-                const SizedBox(height: 12),
-                _IdentificationCard(draft: draft),
-                const SizedBox(height: 12),
-                const _Legend(),
-                const SizedBox(height: 24),
-                ..._buildSections(draft, readOnly),
-                const SizedBox(height: 12),
-                Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.notes_outlined),
-                    title: const Text('Observações da inspeção'),
-                    subtitle: Text(
-                      draft.observations?.isNotEmpty == true
-                          ? draft.observations!
-                          : 'Nenhuma observação geral',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: readOnly ? null : const Icon(Icons.edit_outlined),
-                    onTap: readOnly ? null : () => _editGeneralNotes(draft),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.save_outlined),
+                          label: const Text('Continuar depois'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _completing
+                              ? null
+                              : () => _complete(draft),
+                          icon: _completing
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.task_alt),
+                          label: const Text('Concluir'),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
+        body: ListView(
+          padding: EdgeInsets.fromLTRB(16, 8, 16, readOnly ? 32 : 120),
+          children: [
+            _InspectionProgress(draft: draft),
+            const SizedBox(height: 12),
+            _IdentificationCard(draft: draft),
+            const SizedBox(height: 12),
+            const _Legend(),
+            const SizedBox(height: 24),
+            ..._buildSections(draft, readOnly),
+            const SizedBox(height: 12),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.notes_outlined),
+                title: const Text('Observações da inspeção'),
+                subtitle: Text(
+                  draft.observations?.isNotEmpty == true
+                      ? draft.observations!
+                      : 'Nenhuma observação geral',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: readOnly ? null : const Icon(Icons.edit_outlined),
+                onTap: readOnly ? null : () => _editGeneralNotes(draft),
+              ),
             ),
-          );
-        },
+            const SizedBox(height: 12),
+            _PhotoSection(
+              attachments: draft.attachments,
+              readOnly: readOnly,
+              adding: _addingPhoto,
+              onAdd: () => _addPhoto(draft),
+              onRemove: (attachment) => _removePhoto(draft, attachment),
+            ),
+            if (draft.canDeleteBeforeSync) ...[
+              const SizedBox(height: 20),
+              OutlinedButton.icon(
+                onPressed: _deleting ? null : () => _deleteInspection(draft),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: FieldColors.nonCompliant,
+                  side: const BorderSide(color: FieldColors.nonCompliant),
+                ),
+                icon: _deleting
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.delete_outline),
+                label: const Text('Excluir formulário não enviado'),
+              ),
+            ],
+          ],
+        ),
       );
+    },
+  );
 
   List<Widget> _buildSections(InspectionDraft draft, bool readOnly) {
     final sections = <String, List<ChecklistItem>>{};
@@ -273,8 +426,10 @@ class _InspectionScreenState extends State<InspectionScreen> {
         Row(
           children: [
             Expanded(
-              child: Text(entry.key,
-                  style: Theme.of(context).textTheme.titleLarge),
+              child: Text(
+                entry.key,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
             ),
             Text(
               '${entry.value.where((item) => item.result != null).length}/${entry.value.length}',
@@ -298,78 +453,261 @@ class _InspectionScreenState extends State<InspectionScreen> {
   }
 }
 
+class _PhotoSection extends StatelessWidget {
+  const _PhotoSection({
+    required this.attachments,
+    required this.readOnly,
+    required this.adding,
+    required this.onAdd,
+    required this.onRemove,
+  });
+
+  final List<InspectionAttachment> attachments;
+  final bool readOnly;
+  final bool adding;
+  final VoidCallback onAdd;
+  final ValueChanged<InspectionAttachment> onRemove;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.photo_camera_back_outlined),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Fotos da inspeção',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              Text('${attachments.length}/5'),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Anexe fotos gerais ou evidências encontradas durante o checklist.',
+            style: TextStyle(color: FieldColors.notApplicable),
+          ),
+          if (attachments.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                for (final attachment in attachments)
+                  _PhotoThumbnail(
+                    attachment: attachment,
+                    onRemove: readOnly ? null : () => onRemove(attachment),
+                  ),
+              ],
+            ),
+          ],
+          if (!readOnly && attachments.length < 5) ...[
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              onPressed: adding ? null : onAdd,
+              icon: adding
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.add_a_photo_outlined),
+              label: Text(adding ? 'Anexando…' : 'Adicionar foto'),
+            ),
+          ],
+        ],
+      ),
+    ),
+  );
+}
+
+class _PhotoThumbnail extends StatelessWidget {
+  const _PhotoThumbnail({required this.attachment, this.onRemove});
+
+  final InspectionAttachment attachment;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    clipBehavior: Clip.none,
+    children: [
+      ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.file(
+          File(attachment.localPath),
+          width: 104,
+          height: 104,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => Container(
+            width: 104,
+            height: 104,
+            color: FieldColors.steelSoft,
+            alignment: Alignment.center,
+            child: const Icon(Icons.broken_image_outlined),
+          ),
+        ),
+      ),
+      if (onRemove != null)
+        Positioned(
+          top: -8,
+          right: -8,
+          child: IconButton.filled(
+            tooltip: 'Remover foto',
+            onPressed: onRemove,
+            style: IconButton.styleFrom(
+              backgroundColor: FieldColors.nonCompliant,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(32, 32),
+              padding: EdgeInsets.zero,
+            ),
+            iconSize: 18,
+            icon: const Icon(Icons.close),
+          ),
+        ),
+    ],
+  );
+}
+
+class _TextEditorDialog extends StatefulWidget {
+  const _TextEditorDialog({
+    required this.title,
+    required this.hintText,
+    required this.minLines,
+    required this.maxLines,
+    required this.maxLength,
+    this.initialValue,
+  });
+
+  final String title;
+  final String? initialValue;
+  final String hintText;
+  final int minLines;
+  final int maxLines;
+  final int maxLength;
+
+  @override
+  State<_TextEditorDialog> createState() => _TextEditorDialogState();
+}
+
+class _TextEditorDialogState extends State<_TextEditorDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(widget.title),
+    content: TextField(
+      controller: _controller,
+      autofocus: true,
+      minLines: widget.minLines,
+      maxLines: widget.maxLines,
+      maxLength: widget.maxLength,
+      decoration: InputDecoration(hintText: widget.hintText),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Cancelar'),
+      ),
+      FilledButton(
+        onPressed: () => Navigator.pop(context, _controller.text),
+        child: const Text('Salvar'),
+      ),
+    ],
+  );
+}
+
 class _InspectionProgress extends StatelessWidget {
   const _InspectionProgress({required this.draft});
   final InspectionDraft draft;
 
   @override
   Widget build(BuildContext context) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${draft.answeredCount} de ${draft.items.length} itens',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  StateBadge(
-                    label: draft.lifecycle.label,
-                    icon: draft.lifecycle == InspectionLifecycle.completed
-                        ? Icons.task_alt
-                        : Icons.edit_note,
-                    tone: draft.lifecycle == InspectionLifecycle.completed
-                        ? BadgeTone.success
-                        : BadgeTone.attention,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              LinearProgressIndicator(
-                value: draft.progress,
-                minHeight: 8,
-                borderRadius: BorderRadius.circular(8),
-                backgroundColor: FieldColors.steelSoft,
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  StateBadge(
-                    label: draft.syncState.label,
-                    icon: draft.syncState == LocalSyncState.synced
-                        ? Icons.cloud_done_outlined
-                        : draft.syncState == LocalSyncState.conflict
-                            ? Icons.call_split
-                            : Icons.outbox_outlined,
-                    tone: draft.syncState == LocalSyncState.synced
-                        ? BadgeTone.success
-                        : draft.syncState == LocalSyncState.conflict ||
-                                draft.syncState == LocalSyncState.error
-                            ? BadgeTone.danger
-                            : BadgeTone.attention,
-                  ),
-                  const Spacer(),
-                  const Text(
-                    'Salvamento automático',
-                    style: TextStyle(fontSize: 12, color: FieldColors.notApplicable),
-                  ),
-                ],
-              ),
-              if (draft.lastError != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  draft.lastError!,
-                  style: const TextStyle(color: FieldColors.nonCompliant),
+              Expanded(
+                child: Text(
+                  '${draft.answeredCount} de ${draft.items.length} itens',
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
-              ],
+              ),
+              StateBadge(
+                label: draft.lifecycle.label,
+                icon: draft.lifecycle == InspectionLifecycle.completed
+                    ? Icons.task_alt
+                    : Icons.edit_note,
+                tone: draft.lifecycle == InspectionLifecycle.completed
+                    ? BadgeTone.success
+                    : BadgeTone.attention,
+              ),
             ],
           ),
-        ),
-      );
+          const SizedBox(height: 12),
+          LinearProgressIndicator(
+            value: draft.progress,
+            minHeight: 8,
+            borderRadius: BorderRadius.circular(8),
+            backgroundColor: FieldColors.steelSoft,
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              StateBadge(
+                label: draft.syncState.label,
+                icon: draft.syncState == LocalSyncState.synced
+                    ? Icons.cloud_done_outlined
+                    : draft.syncState == LocalSyncState.conflict
+                    ? Icons.call_split
+                    : Icons.outbox_outlined,
+                tone: draft.syncState == LocalSyncState.synced
+                    ? BadgeTone.success
+                    : draft.syncState == LocalSyncState.conflict ||
+                          draft.syncState == LocalSyncState.error
+                    ? BadgeTone.danger
+                    : BadgeTone.attention,
+              ),
+              const Spacer(),
+              const Text(
+                'Salvamento automático',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: FieldColors.notApplicable,
+                ),
+              ),
+            ],
+          ),
+          if (draft.lastError != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              draft.lastError!,
+              style: const TextStyle(color: FieldColors.nonCompliant),
+            ),
+          ],
+        ],
+      ),
+    ),
+  );
 }
 
 class _IdentificationCard extends StatelessWidget {
@@ -389,7 +727,10 @@ class _IdentificationCard extends StatelessWidget {
           _Detail(label: 'Empresa', value: value.company),
           _Detail(label: 'Ativo', value: value.assetCode),
           _Detail(label: 'Placa', value: value.licensePlate ?? '—'),
-          _Detail(label: 'Motorista/operador', value: value.responsiblePersonName),
+          _Detail(
+            label: 'Motorista/operador',
+            value: value.responsiblePersonName,
+          ),
           _Detail(label: 'CNH', value: value.driverLicenseNumber ?? '—'),
         ],
       ),
@@ -404,19 +745,19 @@ class _Detail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(label,
-                  style: const TextStyle(color: FieldColors.notApplicable)),
-            ),
-            Expanded(
-              child: Text(value, textAlign: TextAlign.end),
-            ),
-          ],
+    padding: const EdgeInsets.only(top: 8),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(color: FieldColors.notApplicable),
+          ),
         ),
-      );
+        Expanded(child: Text(value, textAlign: TextAlign.end)),
+      ],
+    ),
+  );
 }
 
 class _Legend extends StatelessWidget {
@@ -424,23 +765,26 @@ class _Legend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: FieldColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: FieldColors.line),
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: FieldColors.surface,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: FieldColors.line),
+    ),
+    child: const Wrap(
+      spacing: 14,
+      runSpacing: 8,
+      children: [
+        _LegendItem(icon: Icons.check_circle_outline, label: 'C · Conforme'),
+        _LegendItem(icon: Icons.warning_amber, label: 'NC · Não conforme'),
+        _LegendItem(icon: Icons.block, label: 'NA · Não aplicável'),
+        _LegendItem(
+          icon: Icons.touch_app_outlined,
+          label: 'Toque novamente para desmarcar',
         ),
-        child: const Wrap(
-          spacing: 14,
-          runSpacing: 8,
-          children: [
-            _LegendItem(icon: Icons.check_circle_outline, label: 'C · Conforme'),
-            _LegendItem(icon: Icons.warning_amber, label: 'NC · Não conforme'),
-            _LegendItem(icon: Icons.block, label: 'NA · Não aplicável'),
-            _LegendItem(icon: Icons.radio_button_unchecked, label: 'Sem resposta'),
-          ],
-        ),
-      );
+      ],
+    ),
+  );
 }
 
 class _LegendItem extends StatelessWidget {
@@ -450,13 +794,13 @@ class _LegendItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 17),
-          const SizedBox(width: 5),
-          Text(label, style: const TextStyle(fontSize: 12)),
-        ],
-      );
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(icon, size: 17),
+      const SizedBox(width: 5),
+      Text(label, style: const TextStyle(fontSize: 12)),
+    ],
+  );
 }
 
 class _ItemCard extends StatelessWidget {
@@ -497,7 +841,9 @@ class _ItemCard extends StatelessWidget {
                   height: 32,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: isNc ? FieldColors.nonCompliant : FieldColors.steelSoft,
+                    color: isNc
+                        ? FieldColors.nonCompliant
+                        : FieldColors.steelSoft,
                     borderRadius: BorderRadius.circular(9),
                   ),
                   child: Text(
@@ -513,14 +859,19 @@ class _ItemCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(item.text,
-                          style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        item.text,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       if (isNc) ...[
                         const SizedBox(height: 5),
                         const Row(
                           children: [
-                            Icon(Icons.warning_amber,
-                                size: 17, color: FieldColors.nonCompliant),
+                            Icon(
+                              Icons.warning_amber,
+                              size: 17,
+                              color: FieldColors.nonCompliant,
+                            ),
                             SizedBox(width: 5),
                             Text(
                               'NC · Não conforme',
@@ -549,7 +900,11 @@ class _ItemCard extends StatelessWidget {
                   color: FieldColors.compliant,
                   onPressed: readOnly
                       ? null
-                      : () => onChanged(InspectionResult.compliant),
+                      : () => onChanged(
+                          item.result == InspectionResult.compliant
+                              ? null
+                              : InspectionResult.compliant,
+                        ),
                 ),
                 _ResultButton(
                   label: 'NC',
@@ -558,7 +913,11 @@ class _ItemCard extends StatelessWidget {
                   color: FieldColors.nonCompliant,
                   onPressed: readOnly
                       ? null
-                      : () => onChanged(InspectionResult.nonCompliant),
+                      : () => onChanged(
+                          item.result == InspectionResult.nonCompliant
+                              ? null
+                              : InspectionResult.nonCompliant,
+                        ),
                 ),
                 _ResultButton(
                   label: 'NA',
@@ -567,14 +926,12 @@ class _ItemCard extends StatelessWidget {
                   color: FieldColors.notApplicable,
                   onPressed: readOnly
                       ? null
-                      : () => onChanged(InspectionResult.notApplicable),
+                      : () => onChanged(
+                          item.result == InspectionResult.notApplicable
+                              ? null
+                              : InspectionResult.notApplicable,
+                        ),
                 ),
-                if (item.result != null && !readOnly)
-                  TextButton.icon(
-                    onPressed: () => onChanged(null),
-                    icon: const Icon(Icons.undo, size: 18),
-                    label: const Text('Sem resposta'),
-                  ),
               ],
             ),
             if (item.observation?.isNotEmpty == true) ...[
@@ -594,9 +951,11 @@ class _ItemCard extends StatelessWidget {
               TextButton.icon(
                 onPressed: onObservation,
                 icon: const Icon(Icons.notes_outlined, size: 18),
-                label: Text(item.observation?.isNotEmpty == true
-                    ? 'Editar observação'
-                    : 'Adicionar observação'),
+                label: Text(
+                  item.observation?.isNotEmpty == true
+                      ? 'Editar observação'
+                      : 'Adicionar observação',
+                ),
               ),
             ],
           ],
@@ -623,19 +982,19 @@ class _ResultButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
-        selected: selected,
-        button: true,
-        label: label,
-        child: OutlinedButton.icon(
-          onPressed: onPressed,
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size(76, 46),
-            foregroundColor: selected ? Colors.white : color,
-            backgroundColor: selected ? color : Colors.transparent,
-            side: BorderSide(color: selected ? color : FieldColors.line),
-          ),
-          icon: Icon(icon, size: 18),
-          label: Text(label),
-        ),
-      );
+    selected: selected,
+    button: true,
+    label: label,
+    child: OutlinedButton.icon(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(76, 46),
+        foregroundColor: selected ? Colors.white : color,
+        backgroundColor: selected ? color : Colors.transparent,
+        side: BorderSide(color: selected ? color : FieldColors.line),
+      ),
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+    ),
+  );
 }

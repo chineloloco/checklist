@@ -6,16 +6,18 @@ final class ChecklistService {
   ChecklistService(this.repository);
   final ChecklistRepository repository;
 
+  Future<List<TemplateChoice>> availableTemplates() =>
+      repository.listAllTemplateChoices();
+
   Future<String> openWeek({
     required AssetSummary asset,
     required TemplateChoice template,
     required DateTime localDate,
-  }) =>
-      repository.openWeeklyChecklist(
-        assetId: asset.id,
-        template: template,
-        localDate: localDate,
-      );
+  }) => repository.openWeeklyChecklist(
+    assetId: asset.id,
+    template: template,
+    localDate: localDate,
+  );
 
   Future<List<TemplateChoice>> templatesFor(AssetSummary asset) async {
     final choices = await repository.listTemplateChoices(asset.id);

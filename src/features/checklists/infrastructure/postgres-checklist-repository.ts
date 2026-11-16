@@ -295,6 +295,7 @@ export class PostgresChecklistRepository {
           lifecycleStatus: input.lifecycleStatus,
           identificationSnapshot: input.identification,
           observations: input.observations,
+          changes: input.attachments,
           authoredBy: context.userId
         })
         .returning();
@@ -361,7 +362,33 @@ export class PostgresChecklistRepository {
     inspectionId: string,
     input: UpdateInspectionInput
   ): Promise<InspectionResult> {
+    const requestHash = hashPayload({ inspectionId, input });
     return this.database.transaction(async (tx) => {
+      if (input.operationId && input.deviceId) {
+        await tx.execute(
+          sql`select pg_advisory_xact_lock(hashtext(${`operation:${context.organizationId}:${input.deviceId}:${input.operationId}`}))`
+        );
+        const [receipt] = await tx
+          .select()
+          .from(idempotencyReceipts)
+          .where(
+            and(
+              eq(idempotencyReceipts.organizationId, context.organizationId),
+              eq(idempotencyReceipts.deviceId, input.deviceId),
+              eq(idempotencyReceipts.operationId, input.operationId)
+            )
+          )
+          .limit(1);
+        if (receipt) {
+          if (receipt.requestHash !== requestHash) {
+            throw conflict(
+              "IDEMPOTENCY_KEY_REUSED",
+              "A chave de idempotência já foi usada com outro conteúdo."
+            );
+          }
+          return resultFromBody(receipt.responseBody);
+        }
+      }
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`inspection:${inspectionId}`}))`);
       const [current] = await tx
         .select({
@@ -406,7 +433,7 @@ export class PostgresChecklistRepository {
           identificationSnapshot: input.identification,
           observations: input.observations,
           correctionReason: input.correctionReason,
-          changes: [],
+          changes: input.attachments,
           authoredBy: context.userId
         })
         .returning();
@@ -457,6 +484,17 @@ export class PostgresChecklistRepository {
         changeType: "UPSERT",
         payload: result
       });
+      if (input.operationId && input.deviceId) {
+        await this.saveReceipt(
+          tx,
+          context.organizationId,
+          input.deviceId,
+          input.operationId,
+          requestHash,
+          200,
+          result
+        );
+      }
       return result;
     });
   }
@@ -470,6 +508,7 @@ export class PostgresChecklistRepository {
         revisionId: inspectionRevisions.id,
         identification: inspectionRevisions.identificationSnapshot,
         observations: inspectionRevisions.observations,
+        attachments: inspectionRevisions.changes,
         correctionReason: inspectionRevisions.correctionReason,
         authoredAt: inspectionRevisions.authoredAt
       })
@@ -509,6 +548,7 @@ export class PostgresChecklistRepository {
       revision: current.inspection.currentRevision,
       identification: current.identification,
       observations: current.observations,
+      attachments: current.attachments,
       correctionReason: current.correctionReason,
       responses: answerRows,
       history

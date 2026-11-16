@@ -33,7 +33,8 @@ class LocalTemplateItems extends Table {
   TextColumn get sourcePrintedNumber => text().nullable()();
   TextColumn get textValue => text().named('text_value')();
   IntColumn get sortOrder => integer()();
-  BoolColumn get requiredOnComplete => boolean().withDefault(const Constant(true))();
+  BoolColumn get requiredOnComplete =>
+      boolean().withDefault(const Constant(true))();
   BoolColumn get requireObservationWhenNc =>
       boolean().withDefault(const Constant(false))();
   BoolColumn get requirePhotoWhenNc =>
@@ -62,6 +63,37 @@ class LocalAssets extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
+class LocalCompanies extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  BoolColumn get active => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+class LocalSites extends Table {
+  TextColumn get id => text()();
+  TextColumn get companyId => text()();
+  TextColumn get name => text()();
+  BoolColumn get active => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+class LocalPeople extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get kind => text()();
+  TextColumn get driverLicenseNumber => text().nullable()();
+  TextColumn get driverLicenseExpiryDate => text().nullable()();
+  BoolColumn get active => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
 class LocalOperationConfigs extends Table {
   TextColumn get id => text()();
   TextColumn get templateId => text()();
@@ -75,6 +107,22 @@ class LocalOperationConfigs extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
+class LocalAssetTemplateAssignments extends Table {
+  TextColumn get id => text()();
+  TextColumn get assetId => text()();
+  TextColumn get templateId => text()();
+  TextColumn get operationConfigId => text()();
+  BoolColumn get active => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+    {assetId, templateId},
+  ];
+}
+
 class LocalWeeklyChecklists extends Table {
   TextColumn get id => text()();
   TextColumn get serverId => text().nullable()();
@@ -85,7 +133,8 @@ class LocalWeeklyChecklists extends Table {
   TextColumn get weekStartDate => text()();
   TextColumn get timezone => text()();
   IntColumn get revision => integer().nullable()();
-  TextColumn get syncState => text().withDefault(const Constant('LOCAL_ONLY'))();
+  TextColumn get syncState =>
+      text().withDefault(const Constant('LOCAL_ONLY'))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 
@@ -94,8 +143,8 @@ class LocalWeeklyChecklists extends Table {
 
   @override
   List<Set<Column<Object>>> get uniqueKeys => [
-        {assetId, templateId, weekStartDate},
-      ];
+    {assetId, templateId, weekStartDate},
+  ];
 }
 
 class LocalInspections extends Table {
@@ -104,11 +153,13 @@ class LocalInspections extends Table {
   TextColumn get weeklyChecklistId => text()();
   TextColumn get localDate => text()();
   IntColumn get occurrenceNo => integer().withDefault(const Constant(1))();
-  TextColumn get lifecycleStatus => text().withDefault(const Constant('DRAFT'))();
+  TextColumn get lifecycleStatus =>
+      text().withDefault(const Constant('DRAFT'))();
   TextColumn get identificationJson => text()();
   TextColumn get observations => text().nullable()();
   IntColumn get revision => integer().nullable()();
-  TextColumn get syncState => text().withDefault(const Constant('LOCAL_ONLY'))();
+  TextColumn get syncState =>
+      text().withDefault(const Constant('LOCAL_ONLY'))();
   TextColumn get lastError => text().nullable()();
   TextColumn get conflictId => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
@@ -119,8 +170,8 @@ class LocalInspections extends Table {
 
   @override
   List<Set<Column<Object>>> get uniqueKeys => [
-        {weeklyChecklistId, localDate, occurrenceNo},
-      ];
+    {weeklyChecklistId, localDate, occurrenceNo},
+  ];
 }
 
 class LocalInspectionResponses extends Table {
@@ -179,7 +230,8 @@ class LocalAttachments extends Table {
   TextColumn get purpose => text()();
   BoolColumn get requiredForCompletion =>
       boolean().withDefault(const Constant(false))();
-  TextColumn get syncState => text().withDefault(const Constant('LOCAL_ONLY'))();
+  TextColumn get syncState =>
+      text().withDefault(const Constant('LOCAL_ONLY'))();
   TextColumn get remoteId => text().nullable()();
   TextColumn get lastError => text().nullable()();
 
@@ -193,7 +245,11 @@ class LocalAttachments extends Table {
     LocalTemplateSections,
     LocalTemplateItems,
     LocalAssets,
+    LocalCompanies,
+    LocalSites,
+    LocalPeople,
     LocalOperationConfigs,
+    LocalAssetTemplateAssignments,
     LocalWeeklyChecklists,
     LocalInspections,
     LocalInspectionResponses,
@@ -207,13 +263,23 @@ final class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (migrator) => migrator.createAll(),
-        beforeOpen: (details) async {
-          await customStatement('PRAGMA foreign_keys = ON');
-        },
-      );
+    onCreate: (migrator) => migrator.createAll(),
+    onUpgrade: (migrator, from, to) async {
+      if (from < 2) {
+        await migrator.createTable(localAssetTemplateAssignments);
+      }
+      if (from < 3) {
+        await migrator.createTable(localCompanies);
+        await migrator.createTable(localSites);
+        await migrator.createTable(localPeople);
+      }
+    },
+    beforeOpen: (details) async {
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
+  );
 }

@@ -2239,6 +2239,1013 @@ class LocalAssetsCompanion extends UpdateCompanion<LocalAsset> {
   }
 }
 
+class $LocalCompaniesTable extends LocalCompanies
+    with TableInfo<$LocalCompaniesTable, LocalCompany> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalCompaniesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _activeMeta = const VerificationMeta('active');
+  @override
+  late final GeneratedColumn<bool> active = GeneratedColumn<bool>(
+    'active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, name, active];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_companies';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalCompany> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('active')) {
+      context.handle(
+        _activeMeta,
+        active.isAcceptableOrUnknown(data['active']!, _activeMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalCompany map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalCompany(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      active: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}active'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalCompaniesTable createAlias(String alias) {
+    return $LocalCompaniesTable(attachedDatabase, alias);
+  }
+}
+
+class LocalCompany extends DataClass implements Insertable<LocalCompany> {
+  final String id;
+  final String name;
+  final bool active;
+  const LocalCompany({
+    required this.id,
+    required this.name,
+    required this.active,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['active'] = Variable<bool>(active);
+    return map;
+  }
+
+  LocalCompaniesCompanion toCompanion(bool nullToAbsent) {
+    return LocalCompaniesCompanion(
+      id: Value(id),
+      name: Value(name),
+      active: Value(active),
+    );
+  }
+
+  factory LocalCompany.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalCompany(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      active: serializer.fromJson<bool>(json['active']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'active': serializer.toJson<bool>(active),
+    };
+  }
+
+  LocalCompany copyWith({String? id, String? name, bool? active}) =>
+      LocalCompany(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        active: active ?? this.active,
+      );
+  LocalCompany copyWithCompanion(LocalCompaniesCompanion data) {
+    return LocalCompany(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      active: data.active.present ? data.active.value : this.active,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalCompany(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('active: $active')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, active);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalCompany &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.active == this.active);
+}
+
+class LocalCompaniesCompanion extends UpdateCompanion<LocalCompany> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<bool> active;
+  final Value<int> rowid;
+  const LocalCompaniesCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.active = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalCompaniesCompanion.insert({
+    required String id,
+    required String name,
+    this.active = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name);
+  static Insertable<LocalCompany> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<bool>? active,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (active != null) 'active': active,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalCompaniesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<bool>? active,
+    Value<int>? rowid,
+  }) {
+    return LocalCompaniesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      active: active ?? this.active,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (active.present) {
+      map['active'] = Variable<bool>(active.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalCompaniesCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('active: $active, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalSitesTable extends LocalSites
+    with TableInfo<$LocalSitesTable, LocalSite> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalSitesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _companyIdMeta = const VerificationMeta(
+    'companyId',
+  );
+  @override
+  late final GeneratedColumn<String> companyId = GeneratedColumn<String>(
+    'company_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _activeMeta = const VerificationMeta('active');
+  @override
+  late final GeneratedColumn<bool> active = GeneratedColumn<bool>(
+    'active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, companyId, name, active];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_sites';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalSite> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('company_id')) {
+      context.handle(
+        _companyIdMeta,
+        companyId.isAcceptableOrUnknown(data['company_id']!, _companyIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_companyIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('active')) {
+      context.handle(
+        _activeMeta,
+        active.isAcceptableOrUnknown(data['active']!, _activeMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalSite map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalSite(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      companyId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}company_id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      active: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}active'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalSitesTable createAlias(String alias) {
+    return $LocalSitesTable(attachedDatabase, alias);
+  }
+}
+
+class LocalSite extends DataClass implements Insertable<LocalSite> {
+  final String id;
+  final String companyId;
+  final String name;
+  final bool active;
+  const LocalSite({
+    required this.id,
+    required this.companyId,
+    required this.name,
+    required this.active,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['company_id'] = Variable<String>(companyId);
+    map['name'] = Variable<String>(name);
+    map['active'] = Variable<bool>(active);
+    return map;
+  }
+
+  LocalSitesCompanion toCompanion(bool nullToAbsent) {
+    return LocalSitesCompanion(
+      id: Value(id),
+      companyId: Value(companyId),
+      name: Value(name),
+      active: Value(active),
+    );
+  }
+
+  factory LocalSite.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalSite(
+      id: serializer.fromJson<String>(json['id']),
+      companyId: serializer.fromJson<String>(json['companyId']),
+      name: serializer.fromJson<String>(json['name']),
+      active: serializer.fromJson<bool>(json['active']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'companyId': serializer.toJson<String>(companyId),
+      'name': serializer.toJson<String>(name),
+      'active': serializer.toJson<bool>(active),
+    };
+  }
+
+  LocalSite copyWith({
+    String? id,
+    String? companyId,
+    String? name,
+    bool? active,
+  }) => LocalSite(
+    id: id ?? this.id,
+    companyId: companyId ?? this.companyId,
+    name: name ?? this.name,
+    active: active ?? this.active,
+  );
+  LocalSite copyWithCompanion(LocalSitesCompanion data) {
+    return LocalSite(
+      id: data.id.present ? data.id.value : this.id,
+      companyId: data.companyId.present ? data.companyId.value : this.companyId,
+      name: data.name.present ? data.name.value : this.name,
+      active: data.active.present ? data.active.value : this.active,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalSite(')
+          ..write('id: $id, ')
+          ..write('companyId: $companyId, ')
+          ..write('name: $name, ')
+          ..write('active: $active')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, companyId, name, active);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalSite &&
+          other.id == this.id &&
+          other.companyId == this.companyId &&
+          other.name == this.name &&
+          other.active == this.active);
+}
+
+class LocalSitesCompanion extends UpdateCompanion<LocalSite> {
+  final Value<String> id;
+  final Value<String> companyId;
+  final Value<String> name;
+  final Value<bool> active;
+  final Value<int> rowid;
+  const LocalSitesCompanion({
+    this.id = const Value.absent(),
+    this.companyId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.active = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalSitesCompanion.insert({
+    required String id,
+    required String companyId,
+    required String name,
+    this.active = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       companyId = Value(companyId),
+       name = Value(name);
+  static Insertable<LocalSite> custom({
+    Expression<String>? id,
+    Expression<String>? companyId,
+    Expression<String>? name,
+    Expression<bool>? active,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (companyId != null) 'company_id': companyId,
+      if (name != null) 'name': name,
+      if (active != null) 'active': active,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalSitesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? companyId,
+    Value<String>? name,
+    Value<bool>? active,
+    Value<int>? rowid,
+  }) {
+    return LocalSitesCompanion(
+      id: id ?? this.id,
+      companyId: companyId ?? this.companyId,
+      name: name ?? this.name,
+      active: active ?? this.active,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (companyId.present) {
+      map['company_id'] = Variable<String>(companyId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (active.present) {
+      map['active'] = Variable<bool>(active.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalSitesCompanion(')
+          ..write('id: $id, ')
+          ..write('companyId: $companyId, ')
+          ..write('name: $name, ')
+          ..write('active: $active, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalPeopleTable extends LocalPeople
+    with TableInfo<$LocalPeopleTable, LocalPeopleData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalPeopleTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _driverLicenseNumberMeta =
+      const VerificationMeta('driverLicenseNumber');
+  @override
+  late final GeneratedColumn<String> driverLicenseNumber =
+      GeneratedColumn<String>(
+        'driver_license_number',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _driverLicenseExpiryDateMeta =
+      const VerificationMeta('driverLicenseExpiryDate');
+  @override
+  late final GeneratedColumn<String> driverLicenseExpiryDate =
+      GeneratedColumn<String>(
+        'driver_license_expiry_date',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _activeMeta = const VerificationMeta('active');
+  @override
+  late final GeneratedColumn<bool> active = GeneratedColumn<bool>(
+    'active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    kind,
+    driverLicenseNumber,
+    driverLicenseExpiryDate,
+    active,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_people';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalPeopleData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('driver_license_number')) {
+      context.handle(
+        _driverLicenseNumberMeta,
+        driverLicenseNumber.isAcceptableOrUnknown(
+          data['driver_license_number']!,
+          _driverLicenseNumberMeta,
+        ),
+      );
+    }
+    if (data.containsKey('driver_license_expiry_date')) {
+      context.handle(
+        _driverLicenseExpiryDateMeta,
+        driverLicenseExpiryDate.isAcceptableOrUnknown(
+          data['driver_license_expiry_date']!,
+          _driverLicenseExpiryDateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('active')) {
+      context.handle(
+        _activeMeta,
+        active.isAcceptableOrUnknown(data['active']!, _activeMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalPeopleData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalPeopleData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      driverLicenseNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}driver_license_number'],
+      ),
+      driverLicenseExpiryDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}driver_license_expiry_date'],
+      ),
+      active: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}active'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalPeopleTable createAlias(String alias) {
+    return $LocalPeopleTable(attachedDatabase, alias);
+  }
+}
+
+class LocalPeopleData extends DataClass implements Insertable<LocalPeopleData> {
+  final String id;
+  final String name;
+  final String kind;
+  final String? driverLicenseNumber;
+  final String? driverLicenseExpiryDate;
+  final bool active;
+  const LocalPeopleData({
+    required this.id,
+    required this.name,
+    required this.kind,
+    this.driverLicenseNumber,
+    this.driverLicenseExpiryDate,
+    required this.active,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['kind'] = Variable<String>(kind);
+    if (!nullToAbsent || driverLicenseNumber != null) {
+      map['driver_license_number'] = Variable<String>(driverLicenseNumber);
+    }
+    if (!nullToAbsent || driverLicenseExpiryDate != null) {
+      map['driver_license_expiry_date'] = Variable<String>(
+        driverLicenseExpiryDate,
+      );
+    }
+    map['active'] = Variable<bool>(active);
+    return map;
+  }
+
+  LocalPeopleCompanion toCompanion(bool nullToAbsent) {
+    return LocalPeopleCompanion(
+      id: Value(id),
+      name: Value(name),
+      kind: Value(kind),
+      driverLicenseNumber: driverLicenseNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(driverLicenseNumber),
+      driverLicenseExpiryDate: driverLicenseExpiryDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(driverLicenseExpiryDate),
+      active: Value(active),
+    );
+  }
+
+  factory LocalPeopleData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalPeopleData(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      kind: serializer.fromJson<String>(json['kind']),
+      driverLicenseNumber: serializer.fromJson<String?>(
+        json['driverLicenseNumber'],
+      ),
+      driverLicenseExpiryDate: serializer.fromJson<String?>(
+        json['driverLicenseExpiryDate'],
+      ),
+      active: serializer.fromJson<bool>(json['active']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'kind': serializer.toJson<String>(kind),
+      'driverLicenseNumber': serializer.toJson<String?>(driverLicenseNumber),
+      'driverLicenseExpiryDate': serializer.toJson<String?>(
+        driverLicenseExpiryDate,
+      ),
+      'active': serializer.toJson<bool>(active),
+    };
+  }
+
+  LocalPeopleData copyWith({
+    String? id,
+    String? name,
+    String? kind,
+    Value<String?> driverLicenseNumber = const Value.absent(),
+    Value<String?> driverLicenseExpiryDate = const Value.absent(),
+    bool? active,
+  }) => LocalPeopleData(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    kind: kind ?? this.kind,
+    driverLicenseNumber: driverLicenseNumber.present
+        ? driverLicenseNumber.value
+        : this.driverLicenseNumber,
+    driverLicenseExpiryDate: driverLicenseExpiryDate.present
+        ? driverLicenseExpiryDate.value
+        : this.driverLicenseExpiryDate,
+    active: active ?? this.active,
+  );
+  LocalPeopleData copyWithCompanion(LocalPeopleCompanion data) {
+    return LocalPeopleData(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      driverLicenseNumber: data.driverLicenseNumber.present
+          ? data.driverLicenseNumber.value
+          : this.driverLicenseNumber,
+      driverLicenseExpiryDate: data.driverLicenseExpiryDate.present
+          ? data.driverLicenseExpiryDate.value
+          : this.driverLicenseExpiryDate,
+      active: data.active.present ? data.active.value : this.active,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalPeopleData(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('kind: $kind, ')
+          ..write('driverLicenseNumber: $driverLicenseNumber, ')
+          ..write('driverLicenseExpiryDate: $driverLicenseExpiryDate, ')
+          ..write('active: $active')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    kind,
+    driverLicenseNumber,
+    driverLicenseExpiryDate,
+    active,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalPeopleData &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.kind == this.kind &&
+          other.driverLicenseNumber == this.driverLicenseNumber &&
+          other.driverLicenseExpiryDate == this.driverLicenseExpiryDate &&
+          other.active == this.active);
+}
+
+class LocalPeopleCompanion extends UpdateCompanion<LocalPeopleData> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String> kind;
+  final Value<String?> driverLicenseNumber;
+  final Value<String?> driverLicenseExpiryDate;
+  final Value<bool> active;
+  final Value<int> rowid;
+  const LocalPeopleCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.driverLicenseNumber = const Value.absent(),
+    this.driverLicenseExpiryDate = const Value.absent(),
+    this.active = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalPeopleCompanion.insert({
+    required String id,
+    required String name,
+    required String kind,
+    this.driverLicenseNumber = const Value.absent(),
+    this.driverLicenseExpiryDate = const Value.absent(),
+    this.active = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       kind = Value(kind);
+  static Insertable<LocalPeopleData> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? kind,
+    Expression<String>? driverLicenseNumber,
+    Expression<String>? driverLicenseExpiryDate,
+    Expression<bool>? active,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (kind != null) 'kind': kind,
+      if (driverLicenseNumber != null)
+        'driver_license_number': driverLicenseNumber,
+      if (driverLicenseExpiryDate != null)
+        'driver_license_expiry_date': driverLicenseExpiryDate,
+      if (active != null) 'active': active,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalPeopleCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<String>? kind,
+    Value<String?>? driverLicenseNumber,
+    Value<String?>? driverLicenseExpiryDate,
+    Value<bool>? active,
+    Value<int>? rowid,
+  }) {
+    return LocalPeopleCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      kind: kind ?? this.kind,
+      driverLicenseNumber: driverLicenseNumber ?? this.driverLicenseNumber,
+      driverLicenseExpiryDate:
+          driverLicenseExpiryDate ?? this.driverLicenseExpiryDate,
+      active: active ?? this.active,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (driverLicenseNumber.present) {
+      map['driver_license_number'] = Variable<String>(
+        driverLicenseNumber.value,
+      );
+    }
+    if (driverLicenseExpiryDate.present) {
+      map['driver_license_expiry_date'] = Variable<String>(
+        driverLicenseExpiryDate.value,
+      );
+    }
+    if (active.present) {
+      map['active'] = Variable<bool>(active.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalPeopleCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('kind: $kind, ')
+          ..write('driverLicenseNumber: $driverLicenseNumber, ')
+          ..write('driverLicenseExpiryDate: $driverLicenseExpiryDate, ')
+          ..write('active: $active, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $LocalOperationConfigsTable extends LocalOperationConfigs
     with TableInfo<$LocalOperationConfigsTable, LocalOperationConfig> {
   @override
@@ -2726,6 +3733,391 @@ class LocalOperationConfigsCompanion
           ..write('requiredWeekdaysJson: $requiredWeekdaysJson, ')
           ..write('maxOccurrencesPerDate: $maxOccurrencesPerDate, ')
           ..write('rawJson: $rawJson, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalAssetTemplateAssignmentsTable extends LocalAssetTemplateAssignments
+    with
+        TableInfo<
+          $LocalAssetTemplateAssignmentsTable,
+          LocalAssetTemplateAssignment
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalAssetTemplateAssignmentsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _assetIdMeta = const VerificationMeta(
+    'assetId',
+  );
+  @override
+  late final GeneratedColumn<String> assetId = GeneratedColumn<String>(
+    'asset_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _templateIdMeta = const VerificationMeta(
+    'templateId',
+  );
+  @override
+  late final GeneratedColumn<String> templateId = GeneratedColumn<String>(
+    'template_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _operationConfigIdMeta = const VerificationMeta(
+    'operationConfigId',
+  );
+  @override
+  late final GeneratedColumn<String> operationConfigId =
+      GeneratedColumn<String>(
+        'operation_config_id',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _activeMeta = const VerificationMeta('active');
+  @override
+  late final GeneratedColumn<bool> active = GeneratedColumn<bool>(
+    'active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    assetId,
+    templateId,
+    operationConfigId,
+    active,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_asset_template_assignments';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalAssetTemplateAssignment> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('asset_id')) {
+      context.handle(
+        _assetIdMeta,
+        assetId.isAcceptableOrUnknown(data['asset_id']!, _assetIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_assetIdMeta);
+    }
+    if (data.containsKey('template_id')) {
+      context.handle(
+        _templateIdMeta,
+        templateId.isAcceptableOrUnknown(data['template_id']!, _templateIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_templateIdMeta);
+    }
+    if (data.containsKey('operation_config_id')) {
+      context.handle(
+        _operationConfigIdMeta,
+        operationConfigId.isAcceptableOrUnknown(
+          data['operation_config_id']!,
+          _operationConfigIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_operationConfigIdMeta);
+    }
+    if (data.containsKey('active')) {
+      context.handle(
+        _activeMeta,
+        active.isAcceptableOrUnknown(data['active']!, _activeMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {assetId, templateId},
+  ];
+  @override
+  LocalAssetTemplateAssignment map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalAssetTemplateAssignment(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      assetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}asset_id'],
+      )!,
+      templateId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}template_id'],
+      )!,
+      operationConfigId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}operation_config_id'],
+      )!,
+      active: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}active'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalAssetTemplateAssignmentsTable createAlias(String alias) {
+    return $LocalAssetTemplateAssignmentsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalAssetTemplateAssignment extends DataClass
+    implements Insertable<LocalAssetTemplateAssignment> {
+  final String id;
+  final String assetId;
+  final String templateId;
+  final String operationConfigId;
+  final bool active;
+  const LocalAssetTemplateAssignment({
+    required this.id,
+    required this.assetId,
+    required this.templateId,
+    required this.operationConfigId,
+    required this.active,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['asset_id'] = Variable<String>(assetId);
+    map['template_id'] = Variable<String>(templateId);
+    map['operation_config_id'] = Variable<String>(operationConfigId);
+    map['active'] = Variable<bool>(active);
+    return map;
+  }
+
+  LocalAssetTemplateAssignmentsCompanion toCompanion(bool nullToAbsent) {
+    return LocalAssetTemplateAssignmentsCompanion(
+      id: Value(id),
+      assetId: Value(assetId),
+      templateId: Value(templateId),
+      operationConfigId: Value(operationConfigId),
+      active: Value(active),
+    );
+  }
+
+  factory LocalAssetTemplateAssignment.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalAssetTemplateAssignment(
+      id: serializer.fromJson<String>(json['id']),
+      assetId: serializer.fromJson<String>(json['assetId']),
+      templateId: serializer.fromJson<String>(json['templateId']),
+      operationConfigId: serializer.fromJson<String>(json['operationConfigId']),
+      active: serializer.fromJson<bool>(json['active']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'assetId': serializer.toJson<String>(assetId),
+      'templateId': serializer.toJson<String>(templateId),
+      'operationConfigId': serializer.toJson<String>(operationConfigId),
+      'active': serializer.toJson<bool>(active),
+    };
+  }
+
+  LocalAssetTemplateAssignment copyWith({
+    String? id,
+    String? assetId,
+    String? templateId,
+    String? operationConfigId,
+    bool? active,
+  }) => LocalAssetTemplateAssignment(
+    id: id ?? this.id,
+    assetId: assetId ?? this.assetId,
+    templateId: templateId ?? this.templateId,
+    operationConfigId: operationConfigId ?? this.operationConfigId,
+    active: active ?? this.active,
+  );
+  LocalAssetTemplateAssignment copyWithCompanion(
+    LocalAssetTemplateAssignmentsCompanion data,
+  ) {
+    return LocalAssetTemplateAssignment(
+      id: data.id.present ? data.id.value : this.id,
+      assetId: data.assetId.present ? data.assetId.value : this.assetId,
+      templateId: data.templateId.present
+          ? data.templateId.value
+          : this.templateId,
+      operationConfigId: data.operationConfigId.present
+          ? data.operationConfigId.value
+          : this.operationConfigId,
+      active: data.active.present ? data.active.value : this.active,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalAssetTemplateAssignment(')
+          ..write('id: $id, ')
+          ..write('assetId: $assetId, ')
+          ..write('templateId: $templateId, ')
+          ..write('operationConfigId: $operationConfigId, ')
+          ..write('active: $active')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, assetId, templateId, operationConfigId, active);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalAssetTemplateAssignment &&
+          other.id == this.id &&
+          other.assetId == this.assetId &&
+          other.templateId == this.templateId &&
+          other.operationConfigId == this.operationConfigId &&
+          other.active == this.active);
+}
+
+class LocalAssetTemplateAssignmentsCompanion
+    extends UpdateCompanion<LocalAssetTemplateAssignment> {
+  final Value<String> id;
+  final Value<String> assetId;
+  final Value<String> templateId;
+  final Value<String> operationConfigId;
+  final Value<bool> active;
+  final Value<int> rowid;
+  const LocalAssetTemplateAssignmentsCompanion({
+    this.id = const Value.absent(),
+    this.assetId = const Value.absent(),
+    this.templateId = const Value.absent(),
+    this.operationConfigId = const Value.absent(),
+    this.active = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalAssetTemplateAssignmentsCompanion.insert({
+    required String id,
+    required String assetId,
+    required String templateId,
+    required String operationConfigId,
+    this.active = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       assetId = Value(assetId),
+       templateId = Value(templateId),
+       operationConfigId = Value(operationConfigId);
+  static Insertable<LocalAssetTemplateAssignment> custom({
+    Expression<String>? id,
+    Expression<String>? assetId,
+    Expression<String>? templateId,
+    Expression<String>? operationConfigId,
+    Expression<bool>? active,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (assetId != null) 'asset_id': assetId,
+      if (templateId != null) 'template_id': templateId,
+      if (operationConfigId != null) 'operation_config_id': operationConfigId,
+      if (active != null) 'active': active,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalAssetTemplateAssignmentsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? assetId,
+    Value<String>? templateId,
+    Value<String>? operationConfigId,
+    Value<bool>? active,
+    Value<int>? rowid,
+  }) {
+    return LocalAssetTemplateAssignmentsCompanion(
+      id: id ?? this.id,
+      assetId: assetId ?? this.assetId,
+      templateId: templateId ?? this.templateId,
+      operationConfigId: operationConfigId ?? this.operationConfigId,
+      active: active ?? this.active,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (assetId.present) {
+      map['asset_id'] = Variable<String>(assetId.value);
+    }
+    if (templateId.present) {
+      map['template_id'] = Variable<String>(templateId.value);
+    }
+    if (operationConfigId.present) {
+      map['operation_config_id'] = Variable<String>(operationConfigId.value);
+    }
+    if (active.present) {
+      map['active'] = Variable<bool>(active.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalAssetTemplateAssignmentsCompanion(')
+          ..write('id: $id, ')
+          ..write('assetId: $assetId, ')
+          ..write('templateId: $templateId, ')
+          ..write('operationConfigId: $operationConfigId, ')
+          ..write('active: $active, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6578,8 +7970,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LocalTemplateItemsTable localTemplateItems =
       $LocalTemplateItemsTable(this);
   late final $LocalAssetsTable localAssets = $LocalAssetsTable(this);
+  late final $LocalCompaniesTable localCompanies = $LocalCompaniesTable(this);
+  late final $LocalSitesTable localSites = $LocalSitesTable(this);
+  late final $LocalPeopleTable localPeople = $LocalPeopleTable(this);
   late final $LocalOperationConfigsTable localOperationConfigs =
       $LocalOperationConfigsTable(this);
+  late final $LocalAssetTemplateAssignmentsTable localAssetTemplateAssignments =
+      $LocalAssetTemplateAssignmentsTable(this);
   late final $LocalWeeklyChecklistsTable localWeeklyChecklists =
       $LocalWeeklyChecklistsTable(this);
   late final $LocalInspectionsTable localInspections = $LocalInspectionsTable(
@@ -6605,7 +8002,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     localTemplateSections,
     localTemplateItems,
     localAssets,
+    localCompanies,
+    localSites,
+    localPeople,
     localOperationConfigs,
+    localAssetTemplateAssignments,
     localWeeklyChecklists,
     localInspections,
     localInspectionResponses,
@@ -7805,6 +9206,598 @@ typedef $$LocalAssetsTableProcessedTableManager =
       LocalAsset,
       PrefetchHooks Function()
     >;
+typedef $$LocalCompaniesTableCreateCompanionBuilder =
+    LocalCompaniesCompanion Function({
+      required String id,
+      required String name,
+      Value<bool> active,
+      Value<int> rowid,
+    });
+typedef $$LocalCompaniesTableUpdateCompanionBuilder =
+    LocalCompaniesCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<bool> active,
+      Value<int> rowid,
+    });
+
+class $$LocalCompaniesTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalCompaniesTable> {
+  $$LocalCompaniesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get active => $composableBuilder(
+    column: $table.active,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalCompaniesTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalCompaniesTable> {
+  $$LocalCompaniesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get active => $composableBuilder(
+    column: $table.active,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalCompaniesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalCompaniesTable> {
+  $$LocalCompaniesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<bool> get active =>
+      $composableBuilder(column: $table.active, builder: (column) => column);
+}
+
+class $$LocalCompaniesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalCompaniesTable,
+          LocalCompany,
+          $$LocalCompaniesTableFilterComposer,
+          $$LocalCompaniesTableOrderingComposer,
+          $$LocalCompaniesTableAnnotationComposer,
+          $$LocalCompaniesTableCreateCompanionBuilder,
+          $$LocalCompaniesTableUpdateCompanionBuilder,
+          (
+            LocalCompany,
+            BaseReferences<_$AppDatabase, $LocalCompaniesTable, LocalCompany>,
+          ),
+          LocalCompany,
+          PrefetchHooks Function()
+        > {
+  $$LocalCompaniesTableTableManager(
+    _$AppDatabase db,
+    $LocalCompaniesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalCompaniesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalCompaniesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalCompaniesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<bool> active = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalCompaniesCompanion(
+                id: id,
+                name: name,
+                active: active,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                Value<bool> active = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalCompaniesCompanion.insert(
+                id: id,
+                name: name,
+                active: active,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$LocalCompaniesTable, LocalCompany>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $LocalCompaniesTable,
+                    LocalCompany
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalCompaniesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalCompaniesTable,
+      LocalCompany,
+      $$LocalCompaniesTableFilterComposer,
+      $$LocalCompaniesTableOrderingComposer,
+      $$LocalCompaniesTableAnnotationComposer,
+      $$LocalCompaniesTableCreateCompanionBuilder,
+      $$LocalCompaniesTableUpdateCompanionBuilder,
+      (
+        LocalCompany,
+        BaseReferences<_$AppDatabase, $LocalCompaniesTable, LocalCompany>,
+      ),
+      LocalCompany,
+      PrefetchHooks Function()
+    >;
+typedef $$LocalSitesTableCreateCompanionBuilder =
+    LocalSitesCompanion Function({
+      required String id,
+      required String companyId,
+      required String name,
+      Value<bool> active,
+      Value<int> rowid,
+    });
+typedef $$LocalSitesTableUpdateCompanionBuilder =
+    LocalSitesCompanion Function({
+      Value<String> id,
+      Value<String> companyId,
+      Value<String> name,
+      Value<bool> active,
+      Value<int> rowid,
+    });
+
+class $$LocalSitesTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalSitesTable> {
+  $$LocalSitesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get companyId => $composableBuilder(
+    column: $table.companyId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get active => $composableBuilder(
+    column: $table.active,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalSitesTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalSitesTable> {
+  $$LocalSitesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get companyId => $composableBuilder(
+    column: $table.companyId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get active => $composableBuilder(
+    column: $table.active,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalSitesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalSitesTable> {
+  $$LocalSitesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get companyId =>
+      $composableBuilder(column: $table.companyId, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<bool> get active =>
+      $composableBuilder(column: $table.active, builder: (column) => column);
+}
+
+class $$LocalSitesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalSitesTable,
+          LocalSite,
+          $$LocalSitesTableFilterComposer,
+          $$LocalSitesTableOrderingComposer,
+          $$LocalSitesTableAnnotationComposer,
+          $$LocalSitesTableCreateCompanionBuilder,
+          $$LocalSitesTableUpdateCompanionBuilder,
+          (
+            LocalSite,
+            BaseReferences<_$AppDatabase, $LocalSitesTable, LocalSite>,
+          ),
+          LocalSite,
+          PrefetchHooks Function()
+        > {
+  $$LocalSitesTableTableManager(_$AppDatabase db, $LocalSitesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalSitesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalSitesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalSitesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> companyId = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<bool> active = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalSitesCompanion(
+                id: id,
+                companyId: companyId,
+                name: name,
+                active: active,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String companyId,
+                required String name,
+                Value<bool> active = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalSitesCompanion.insert(
+                id: id,
+                companyId: companyId,
+                name: name,
+                active: active,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$LocalSitesTable, LocalSite>(table),
+                  BaseReferences<_$AppDatabase, $LocalSitesTable, LocalSite>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalSitesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalSitesTable,
+      LocalSite,
+      $$LocalSitesTableFilterComposer,
+      $$LocalSitesTableOrderingComposer,
+      $$LocalSitesTableAnnotationComposer,
+      $$LocalSitesTableCreateCompanionBuilder,
+      $$LocalSitesTableUpdateCompanionBuilder,
+      (LocalSite, BaseReferences<_$AppDatabase, $LocalSitesTable, LocalSite>),
+      LocalSite,
+      PrefetchHooks Function()
+    >;
+typedef $$LocalPeopleTableCreateCompanionBuilder =
+    LocalPeopleCompanion Function({
+      required String id,
+      required String name,
+      required String kind,
+      Value<String?> driverLicenseNumber,
+      Value<String?> driverLicenseExpiryDate,
+      Value<bool> active,
+      Value<int> rowid,
+    });
+typedef $$LocalPeopleTableUpdateCompanionBuilder =
+    LocalPeopleCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<String> kind,
+      Value<String?> driverLicenseNumber,
+      Value<String?> driverLicenseExpiryDate,
+      Value<bool> active,
+      Value<int> rowid,
+    });
+
+class $$LocalPeopleTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalPeopleTable> {
+  $$LocalPeopleTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get driverLicenseNumber => $composableBuilder(
+    column: $table.driverLicenseNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get driverLicenseExpiryDate => $composableBuilder(
+    column: $table.driverLicenseExpiryDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get active => $composableBuilder(
+    column: $table.active,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalPeopleTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalPeopleTable> {
+  $$LocalPeopleTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get driverLicenseNumber => $composableBuilder(
+    column: $table.driverLicenseNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get driverLicenseExpiryDate => $composableBuilder(
+    column: $table.driverLicenseExpiryDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get active => $composableBuilder(
+    column: $table.active,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalPeopleTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalPeopleTable> {
+  $$LocalPeopleTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get driverLicenseNumber => $composableBuilder(
+    column: $table.driverLicenseNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get driverLicenseExpiryDate => $composableBuilder(
+    column: $table.driverLicenseExpiryDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get active =>
+      $composableBuilder(column: $table.active, builder: (column) => column);
+}
+
+class $$LocalPeopleTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalPeopleTable,
+          LocalPeopleData,
+          $$LocalPeopleTableFilterComposer,
+          $$LocalPeopleTableOrderingComposer,
+          $$LocalPeopleTableAnnotationComposer,
+          $$LocalPeopleTableCreateCompanionBuilder,
+          $$LocalPeopleTableUpdateCompanionBuilder,
+          (
+            LocalPeopleData,
+            BaseReferences<_$AppDatabase, $LocalPeopleTable, LocalPeopleData>,
+          ),
+          LocalPeopleData,
+          PrefetchHooks Function()
+        > {
+  $$LocalPeopleTableTableManager(_$AppDatabase db, $LocalPeopleTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalPeopleTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalPeopleTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalPeopleTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String?> driverLicenseNumber = const Value.absent(),
+                Value<String?> driverLicenseExpiryDate = const Value.absent(),
+                Value<bool> active = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalPeopleCompanion(
+                id: id,
+                name: name,
+                kind: kind,
+                driverLicenseNumber: driverLicenseNumber,
+                driverLicenseExpiryDate: driverLicenseExpiryDate,
+                active: active,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                required String kind,
+                Value<String?> driverLicenseNumber = const Value.absent(),
+                Value<String?> driverLicenseExpiryDate = const Value.absent(),
+                Value<bool> active = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalPeopleCompanion.insert(
+                id: id,
+                name: name,
+                kind: kind,
+                driverLicenseNumber: driverLicenseNumber,
+                driverLicenseExpiryDate: driverLicenseExpiryDate,
+                active: active,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$LocalPeopleTable, LocalPeopleData>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $LocalPeopleTable,
+                    LocalPeopleData
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalPeopleTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalPeopleTable,
+      LocalPeopleData,
+      $$LocalPeopleTableFilterComposer,
+      $$LocalPeopleTableOrderingComposer,
+      $$LocalPeopleTableAnnotationComposer,
+      $$LocalPeopleTableCreateCompanionBuilder,
+      $$LocalPeopleTableUpdateCompanionBuilder,
+      (
+        LocalPeopleData,
+        BaseReferences<_$AppDatabase, $LocalPeopleTable, LocalPeopleData>,
+      ),
+      LocalPeopleData,
+      PrefetchHooks Function()
+    >;
 typedef $$LocalOperationConfigsTableCreateCompanionBuilder =
     LocalOperationConfigsCompanion Function({
       required String id,
@@ -8080,6 +10073,241 @@ typedef $$LocalOperationConfigsTableProcessedTableManager =
         >,
       ),
       LocalOperationConfig,
+      PrefetchHooks Function()
+    >;
+typedef $$LocalAssetTemplateAssignmentsTableCreateCompanionBuilder =
+    LocalAssetTemplateAssignmentsCompanion Function({
+      required String id,
+      required String assetId,
+      required String templateId,
+      required String operationConfigId,
+      Value<bool> active,
+      Value<int> rowid,
+    });
+typedef $$LocalAssetTemplateAssignmentsTableUpdateCompanionBuilder =
+    LocalAssetTemplateAssignmentsCompanion Function({
+      Value<String> id,
+      Value<String> assetId,
+      Value<String> templateId,
+      Value<String> operationConfigId,
+      Value<bool> active,
+      Value<int> rowid,
+    });
+
+class $$LocalAssetTemplateAssignmentsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalAssetTemplateAssignmentsTable> {
+  $$LocalAssetTemplateAssignmentsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get assetId => $composableBuilder(
+    column: $table.assetId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get templateId => $composableBuilder(
+    column: $table.templateId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get operationConfigId => $composableBuilder(
+    column: $table.operationConfigId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get active => $composableBuilder(
+    column: $table.active,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalAssetTemplateAssignmentsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalAssetTemplateAssignmentsTable> {
+  $$LocalAssetTemplateAssignmentsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get assetId => $composableBuilder(
+    column: $table.assetId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get templateId => $composableBuilder(
+    column: $table.templateId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get operationConfigId => $composableBuilder(
+    column: $table.operationConfigId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get active => $composableBuilder(
+    column: $table.active,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalAssetTemplateAssignmentsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalAssetTemplateAssignmentsTable> {
+  $$LocalAssetTemplateAssignmentsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get assetId =>
+      $composableBuilder(column: $table.assetId, builder: (column) => column);
+
+  GeneratedColumn<String> get templateId => $composableBuilder(
+    column: $table.templateId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get operationConfigId => $composableBuilder(
+    column: $table.operationConfigId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get active =>
+      $composableBuilder(column: $table.active, builder: (column) => column);
+}
+
+class $$LocalAssetTemplateAssignmentsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalAssetTemplateAssignmentsTable,
+          LocalAssetTemplateAssignment,
+          $$LocalAssetTemplateAssignmentsTableFilterComposer,
+          $$LocalAssetTemplateAssignmentsTableOrderingComposer,
+          $$LocalAssetTemplateAssignmentsTableAnnotationComposer,
+          $$LocalAssetTemplateAssignmentsTableCreateCompanionBuilder,
+          $$LocalAssetTemplateAssignmentsTableUpdateCompanionBuilder,
+          (
+            LocalAssetTemplateAssignment,
+            BaseReferences<
+              _$AppDatabase,
+              $LocalAssetTemplateAssignmentsTable,
+              LocalAssetTemplateAssignment
+            >,
+          ),
+          LocalAssetTemplateAssignment,
+          PrefetchHooks Function()
+        > {
+  $$LocalAssetTemplateAssignmentsTableTableManager(
+    _$AppDatabase db,
+    $LocalAssetTemplateAssignmentsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalAssetTemplateAssignmentsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$LocalAssetTemplateAssignmentsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$LocalAssetTemplateAssignmentsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> assetId = const Value.absent(),
+                Value<String> templateId = const Value.absent(),
+                Value<String> operationConfigId = const Value.absent(),
+                Value<bool> active = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalAssetTemplateAssignmentsCompanion(
+                id: id,
+                assetId: assetId,
+                templateId: templateId,
+                operationConfigId: operationConfigId,
+                active: active,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String assetId,
+                required String templateId,
+                required String operationConfigId,
+                Value<bool> active = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalAssetTemplateAssignmentsCompanion.insert(
+                id: id,
+                assetId: assetId,
+                templateId: templateId,
+                operationConfigId: operationConfigId,
+                active: active,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<
+                    $LocalAssetTemplateAssignmentsTable,
+                    LocalAssetTemplateAssignment
+                  >(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $LocalAssetTemplateAssignmentsTable,
+                    LocalAssetTemplateAssignment
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalAssetTemplateAssignmentsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalAssetTemplateAssignmentsTable,
+      LocalAssetTemplateAssignment,
+      $$LocalAssetTemplateAssignmentsTableFilterComposer,
+      $$LocalAssetTemplateAssignmentsTableOrderingComposer,
+      $$LocalAssetTemplateAssignmentsTableAnnotationComposer,
+      $$LocalAssetTemplateAssignmentsTableCreateCompanionBuilder,
+      $$LocalAssetTemplateAssignmentsTableUpdateCompanionBuilder,
+      (
+        LocalAssetTemplateAssignment,
+        BaseReferences<
+          _$AppDatabase,
+          $LocalAssetTemplateAssignmentsTable,
+          LocalAssetTemplateAssignment
+        >,
+      ),
+      LocalAssetTemplateAssignment,
       PrefetchHooks Function()
     >;
 typedef $$LocalWeeklyChecklistsTableCreateCompanionBuilder =
@@ -10157,8 +12385,20 @@ class $AppDatabaseManager {
       $$LocalTemplateItemsTableTableManager(_db, _db.localTemplateItems);
   $$LocalAssetsTableTableManager get localAssets =>
       $$LocalAssetsTableTableManager(_db, _db.localAssets);
+  $$LocalCompaniesTableTableManager get localCompanies =>
+      $$LocalCompaniesTableTableManager(_db, _db.localCompanies);
+  $$LocalSitesTableTableManager get localSites =>
+      $$LocalSitesTableTableManager(_db, _db.localSites);
+  $$LocalPeopleTableTableManager get localPeople =>
+      $$LocalPeopleTableTableManager(_db, _db.localPeople);
   $$LocalOperationConfigsTableTableManager get localOperationConfigs =>
       $$LocalOperationConfigsTableTableManager(_db, _db.localOperationConfigs);
+  $$LocalAssetTemplateAssignmentsTableTableManager
+  get localAssetTemplateAssignments =>
+      $$LocalAssetTemplateAssignmentsTableTableManager(
+        _db,
+        _db.localAssetTemplateAssignments,
+      );
   $$LocalWeeklyChecklistsTableTableManager get localWeeklyChecklists =>
       $$LocalWeeklyChecklistsTableTableManager(_db, _db.localWeeklyChecklists);
   $$LocalInspectionsTableTableManager get localInspections =>

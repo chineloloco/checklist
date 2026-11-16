@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Status } from "@/components/ui/status";
 import { Empty } from "@/components/ui/empty";
 import { OpenWeeklyForm } from "@/features/checklists/presentation/open-weekly-form";
+import { ChecklistAutoRefresh } from "@/features/checklists/presentation/checklist-auto-refresh";
 import { getAuthContext } from "@/features/auth/application/auth-context";
 import { ChecklistService } from "@/features/checklists/application/checklist-service";
 import { TemplateService } from "@/features/templates/application/template-service";
@@ -19,6 +20,7 @@ export default async function ChecklistsPage({ searchParams }: { searchParams: P
     new TemplateService().list(context, "ACTIVE")
   ]);
   return <>
+    <ChecklistAutoRefresh />
     <PageHeader kicker="Operação semanal" title="Checklists" description="Abra uma semana com a versão publicada vigente. Cada data permanece independente e é disponibilizada assim que sincroniza." />
     <OpenWeeklyForm initialDate={today} assets={assets.map((row) => ({ id: row.asset.id, code: row.asset.code, label: row.asset.makeModel ?? row.asset.manufacturer ?? row.asset.kind }))} templates={templates.map((item) => ({ id: item.id, code: item.code, name: item.name }))} />
     <div className="notice notice-amber" style={{marginBottom:16}}><CloudOff /><div><strong>Calendário com incerteza offline.</strong> Somente os dias configurados são esperados. Ausência no servidor não comprova que o responsável deixou de preencher.</div></div>

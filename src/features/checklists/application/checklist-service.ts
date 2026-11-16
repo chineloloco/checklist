@@ -5,7 +5,7 @@ import type {
   OpenWeeklyChecklistInput,
   UpdateInspectionInput
 } from "@/features/checklists/domain/inspection";
-import { identificationSchema } from "@/features/checklists/domain/inspection";
+import { identificationSchema, inspectionAttachmentSchema } from "@/features/checklists/domain/inspection";
 
 export class ChecklistService {
   constructor(private readonly repository = new PostgresChecklistRepository()) {}
@@ -42,7 +42,8 @@ export class ChecklistService {
         itemId: response.itemId,
         result: response.result,
         observation: response.observation
-      }))
+      })),
+      attachments: inspectionAttachmentSchema.array().parse(current.attachments)
     });
   }
 

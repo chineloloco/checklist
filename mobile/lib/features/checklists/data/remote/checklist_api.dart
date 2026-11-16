@@ -19,9 +19,7 @@ final class ChecklistApi implements ChecklistRemote {
   Future<Map<String, Object?>> bootstrap({String? sinceCursor}) async {
     final response = await _client.get(
       '/mobile/bootstrap',
-      queryParameters: {
-        if (sinceCursor != null) 'sinceCursor': sinceCursor,
-      },
+      queryParameters: {if (sinceCursor != null) 'sinceCursor': sinceCursor},
     );
     return _asObject(response.data);
   }

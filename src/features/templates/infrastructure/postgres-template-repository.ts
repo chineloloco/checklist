@@ -4,6 +4,8 @@ import { getDb } from "@/infrastructure/db/client";
 import {
   auditEvents,
   checklistTemplates,
+  operationConfigs,
+  organizations,
   syncChangeLog,
   templateItems,
   templateSections,
@@ -252,6 +254,36 @@ export class PostgresTemplateRepository {
         .update(checklistTemplates)
         .set({ status: "ACTIVE", updatedAt: now })
         .where(eq(checklistTemplates.id, row.template.id));
+      const [existingConfig] = await tx
+        .select({ id: operationConfigs.id })
+        .from(operationConfigs)
+        .where(
+          and(
+            eq(operationConfigs.organizationId, context.organizationId),
+            eq(operationConfigs.templateId, row.template.id),
+            eq(operationConfigs.active, true)
+          )
+        )
+        .limit(1);
+      if (!existingConfig) {
+        const [organization] = await tx
+          .select({
+            timezone: organizations.timezone,
+            weekStartsOn: organizations.weekStartsOn
+          })
+          .from(organizations)
+          .where(eq(organizations.id, context.organizationId))
+          .limit(1);
+        if (!organization) throw notFound("Organização não encontrada.");
+        await tx.insert(operationConfigs).values({
+          organizationId: context.organizationId,
+          templateId: row.template.id,
+          timezone: organization.timezone,
+          weekStartsOn: organization.weekStartsOn,
+          maxOccurrencesPerDate: 1,
+          effectiveFrom: "2020-01-01"
+        });
+      }
       await tx.insert(auditEvents).values({
         organizationId: context.organizationId,
         entityType: "TEMPLATE_VERSION",
@@ -319,6 +351,14 @@ export class PostgresTemplateRepository {
         throw conflict("TEMPLATE_HAS_HISTORY", "O modelo possui histórico e deve ser arquivado.");
       }
       const versions = await tx.select({ id: templateVersions.id }).from(templateVersions).where(eq(templateVersions.templateId, templateId));
+      await tx.insert(syncChangeLog).values({
+        organizationId: context.organizationId,
+        entityType: "TEMPLATE",
+        entityId: templateId,
+        revision: 1,
+        changeType: "DELETE",
+        payload: { id: templateId }
+      });
       for (const version of versions) {
         await tx.delete(templateItems).where(eq(templateItems.versionId, version.id));
         await tx.delete(templateSections).where(eq(templateSections.versionId, version.id));

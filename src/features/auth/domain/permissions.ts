@@ -57,6 +57,7 @@ const rolePermissions: Record<Role, Permission[]> = {
   INSPECTOR: [
     "dashboard:read",
     "cadastros:read",
+    "cadastros:write",
     "templates:read",
     "inspections:read",
     "inspections:write",

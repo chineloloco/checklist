@@ -30,9 +30,68 @@ tags:
   - name: Audit
     description: Histórico imutável de alterações relevantes.
 security:
-  - oauth2: [checklists:read]
+  - bearerAuth: []
 
 paths:
+  /auth/login:
+    post:
+      tags: [Identity]
+      operationId: mobilePasswordLogin
+      summary: Inicia uma sessão móvel com usuário e senha internos
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email, maxLength: 320 }
+                password: { type: string, minLength: 1, maxLength: 200 }
+                deviceId: { type: string, maxLength: 100 }
+      responses:
+        "200": { description: Access token e refresh token rotativo }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/refresh:
+    post:
+      tags: [Identity]
+      operationId: refreshMobileSession
+      summary: Rotaciona o refresh token e emite um novo access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string, minLength: 32, maxLength: 500 }
+                deviceId: { type: string, maxLength: 100 }
+      responses:
+        "200": { description: Nova sessão móvel }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/logout:
+    post:
+      tags: [Identity]
+      operationId: logoutMobileSession
+      summary: Revoga o refresh token móvel
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string, minLength: 32, maxLength: 500 }
+      responses:
+        "204": { description: Sessão encerrada }
+
   /me:
     get:
       tags: [Identity]
@@ -86,7 +145,7 @@ paths:
       operationId: createTemplate
       summary: Cria modelo com primeira versão em rascunho
       security:
-        - oauth2: [templates:write]
+        - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
@@ -139,7 +198,7 @@ paths:
       operationId: deleteUnusedDraftTemplate
       summary: Exclui modelo somente quando todo o conteúdo é rascunho e não possui uso
       security:
-        - oauth2: [templates:write]
+        - bearerAuth: []
       responses:
         "204": { description: Excluído }
         "409":
@@ -163,7 +222,7 @@ paths:
       operationId: createTemplateVersion
       summary: Cria nova versão em rascunho a partir de uma versão publicada
       security:
-        - oauth2: [templates:write]
+        - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
@@ -205,7 +264,7 @@ paths:
       operationId: updateDraftTemplateVersion
       summary: Edita somente versão em rascunho
       security:
-        - oauth2: [templates:write]
+        - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/IfMatch"
       requestBody:
@@ -229,7 +288,7 @@ paths:
       operationId: publishTemplateVersion
       summary: Publica e torna a versão imutável
       security:
-        - oauth2: [templates:publish]
+        - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/VersionId"
         - $ref: "#/components/parameters/IfMatch"
@@ -259,7 +318,7 @@ paths:
       operationId: archiveTemplate
       summary: Impede novos usos sem remover histórico
       security:
-        - oauth2: [templates:archive]
+        - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/TemplateId"
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -364,7 +423,7 @@ paths:
       operationId: openWeeklyChecklist
       summary: Abre a semana e fixa versão/configuração
       security:
-        - oauth2: [inspections:write]
+        - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
@@ -424,7 +483,7 @@ paths:
       operationId: createInspection
       summary: Cria inspeção por data; preserva candidata em conflito de slot
       security:
-        - oauth2: [inspections:write]
+        - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/WeeklyChecklistId"
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -548,7 +607,7 @@ paths:
       operationId: updateDraftInspection
       summary: Atualiza rascunho com concorrência otimista
       security:
-        - oauth2: [inspections:write]
+        - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/IfMatch"
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -572,7 +631,7 @@ paths:
       operationId: completeInspection
       summary: Conclui uma data sem afetar outras datas da semana
       security:
-        - oauth2: [inspections:write]
+        - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/InspectionId"
         - $ref: "#/components/parameters/IfMatch"
@@ -607,7 +666,7 @@ paths:
       operationId: correctInspection
       summary: Cria nova revisão sem apagar a concluída
       security:
-        - oauth2: [inspections:correct]
+        - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/InspectionId"
         - $ref: "#/components/parameters/IfMatch"
@@ -646,7 +705,7 @@ paths:
       operationId: syncPush
       summary: Envia lote idempotente da outbox; resultado é individual por operação
       security:
-        - oauth2: [sync]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -695,7 +754,7 @@ paths:
       operationId: syncPull
       summary: Retorna alterações autorizadas após o cursor
       security:
-        - oauth2: [sync]
+        - bearerAuth: []
       parameters:
         - name: cursor
           in: query
@@ -722,7 +781,7 @@ paths:
       operationId: listConflicts
       summary: Lista conflitos abertos ou resolvidos
       security:
-        - oauth2: [conflicts:read]
+        - bearerAuth: []
       parameters:
         - name: status
           in: query
@@ -745,7 +804,7 @@ paths:
       operationId: getConflict
       summary: Consulta membros e diferenças de um conflito
       security:
-        - oauth2: [conflicts:read]
+        - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/ConflictId"
       responses:
@@ -762,7 +821,7 @@ paths:
       operationId: resolveConflict
       summary: Resolve conflito sem eliminar os registros originais
       security:
-        - oauth2: [conflicts:resolve]
+        - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/ConflictId"
         - $ref: "#/components/parameters/IfMatch"
@@ -801,7 +860,7 @@ paths:
       operationId: listAuditEvents
       summary: Lista eventos imutáveis de auditoria
       security:
-        - oauth2: [audit:read]
+        - bearerAuth: []
       parameters:
         - name: entityType
           in: query
@@ -825,24 +884,11 @@ paths:
 
 components:
   securitySchemes:
-    oauth2:
-      type: oauth2
-      description: OIDC/OAuth 2.1. Flutter usa Authorization Code com PKCE; web usa sessão segura no BFF.
-      flows:
-        authorizationCode:
-          authorizationUrl: https://identity.example.com/oauth2/authorize
-          tokenUrl: https://identity.example.com/oauth2/token
-          scopes:
-            checklists:read: Consultar dados autorizados
-            templates:write: Editar modelos em rascunho
-            templates:publish: Publicar versões
-            templates:archive: Arquivar modelos
-            inspections:write: Criar e concluir inspeções
-            inspections:correct: Corrigir inspeções concluídas
-            sync: Sincronizar dispositivo autorizado
-            conflicts:read: Consultar conflitos
-            conflicts:resolve: Resolver conflitos
-            audit:read: Consultar auditoria
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token curto emitido por `/auth/login` ou `/auth/refresh`. O web usa sessão segura no BFF.
 
   parameters:
     TemplateId:
@@ -1022,6 +1068,7 @@ components:
         checksum: { type: [string, "null"] }
         publishedAt: { type: [string, "null"], format: date-time }
         publishedBy: { oneOf: [{ $ref: "#/components/schemas/Uuid" }, { type: "null" }] }
+        template: { $ref: "#/components/schemas/TemplateSummary" }
         sections: { type: array, items: { $ref: "#/components/schemas/TemplateSection" } }
     TemplateSection:
       type: object
@@ -1106,6 +1153,17 @@ components:
           type: array
           items: { type: string, enum: [MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY] }
         maxOccurrencesPerDate: { type: integer, minimum: 1, maximum: 20 }
+
+    AssetTemplateAssignment:
+      type: object
+      additionalProperties: false
+      required: [id, assetId, templateId, operationConfigId, active]
+      properties:
+        id: { $ref: "#/components/schemas/Uuid" }
+        assetId: { $ref: "#/components/schemas/Uuid" }
+        templateId: { $ref: "#/components/schemas/Uuid" }
+        operationConfigId: { $ref: "#/components/schemas/Uuid" }
+        active: { type: boolean }
 
     WeeklyChecklist:
       type: object
@@ -1253,7 +1311,7 @@ components:
 
     MobileBootstrap:
       type: object
-      required: [serverTime, cursor, timezone, weekStartsOn, templateVersions, assets, operationConfigs, tombstones]
+      required: [serverTime, cursor, timezone, weekStartsOn, templateVersions, assets, operationConfigs, assetTemplateAssignments, tombstones]
       properties:
         serverTime: { type: string, format: date-time }
         cursor: { type: string }
@@ -1262,6 +1320,7 @@ components:
         templateVersions: { type: array, items: { $ref: "#/components/schemas/TemplateVersion" } }
         assets: { type: array, items: { $ref: "#/components/schemas/Asset" } }
         operationConfigs: { type: array, items: { $ref: "#/components/schemas/OperationConfig" } }
+        assetTemplateAssignments: { type: array, items: { $ref: "#/components/schemas/AssetTemplateAssignment" } }
         tombstones: { type: array, items: { $ref: "#/components/schemas/Tombstone" } }
     Tombstone:
       type: object

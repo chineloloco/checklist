@@ -15,16 +15,31 @@ class SyncBanner extends StatelessWidget {
         valueListenable: coordinator.snapshot,
         builder: (context, value, _) {
           final (label, icon, tone) = switch (value.state) {
-            SyncRunState.running =>
-              ('Sincronizando', Icons.sync, BadgeTone.attention),
-            SyncRunState.offline =>
-              ('Sem conexão', Icons.cloud_off_outlined, BadgeTone.neutral),
-            SyncRunState.sessionExpired =>
-              ('Sessão expirada', Icons.lock_clock_outlined, BadgeTone.danger),
-            SyncRunState.failed =>
-              ('Falha', Icons.error_outline, BadgeTone.danger),
-            SyncRunState.idle when value.pendingCount > 0 =>
-              ('${value.pendingCount} pendente(s)', Icons.outbox_outlined, BadgeTone.attention),
+            SyncRunState.running => (
+                'Sincronizando',
+                Icons.sync,
+                BadgeTone.attention,
+              ),
+            SyncRunState.offline => (
+                'Sem conexão',
+                Icons.cloud_off_outlined,
+                BadgeTone.neutral,
+              ),
+            SyncRunState.sessionExpired => (
+                'Sessão expirada',
+                Icons.lock_clock_outlined,
+                BadgeTone.danger,
+              ),
+            SyncRunState.failed => (
+                'Falha',
+                Icons.error_outline,
+                BadgeTone.danger
+              ),
+            SyncRunState.idle when value.pendingCount > 0 => (
+                '${value.pendingCount} pendente(s)',
+                Icons.outbox_outlined,
+                BadgeTone.attention,
+              ),
             _ => ('Em dia', Icons.cloud_done_outlined, BadgeTone.success),
           };
           final lastSync = value.lastSyncedAt == null

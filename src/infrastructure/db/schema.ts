@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   bigint,
   boolean,
   check,
@@ -100,6 +101,28 @@ export const users = pgTable(
   (table) => [
     uniqueIndex("users_org_email_uq").on(table.organizationId, table.email),
     uniqueIndex("users_external_subject_uq").on(table.externalSubject)
+  ]
+);
+
+export const mobileAuthSessions = pgTable(
+  "mobile_auth_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    familyId: uuid("family_id").notNull(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    refreshTokenHash: varchar("refresh_token_hash", { length: 64 }).notNull(),
+    deviceId: varchar("device_id", { length: 100 }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    replacedById: uuid("replaced_by_id").references((): AnyPgColumn => mobileAuthSessions.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    uniqueIndex("mobile_auth_sessions_refresh_hash_uq").on(table.refreshTokenHash),
+    index("mobile_auth_sessions_user_idx").on(table.userId, table.expiresAt),
+    index("mobile_auth_sessions_family_idx").on(table.familyId)
   ]
 );
 

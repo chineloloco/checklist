@@ -4,9 +4,11 @@ abstract interface class ChecklistRepository {
   Future<void> applyBootstrap(Map<String, Object?> payload);
 
   Future<List<AssetSummary>> listAssets();
+  Future<List<TemplateChoice>> listAllTemplateChoices();
   Future<List<TemplateChoice>> listTemplateChoices(String assetId);
   Stream<List<WeeklyChecklistCard>> watchWeeklyChecklists();
   Future<WeeklyChecklistDetail> getWeeklyChecklist(String id);
+  Stream<WeeklyChecklistDetail> watchWeeklyChecklist(String id);
 
   Future<String> openWeeklyChecklist({
     required String assetId,
@@ -40,6 +42,19 @@ abstract interface class ChecklistRepository {
     required String inspectionId,
     required IdentificationSnapshot identification,
   });
+
+  Future<void> addPhotoAttachment({
+    required String inspectionId,
+    required String localPath,
+    required String mediaType,
+  });
+
+  Future<void> removeAttachment({
+    required String inspectionId,
+    required String attachmentId,
+  });
+
+  Future<void> deleteUnsyncedInspection(String inspectionId);
 
   Future<void> completeInspection(String inspectionId);
 }

@@ -1,13 +1,23 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, ne } from "drizzle-orm";
 import type { AuthContext } from "@/features/auth/application/auth-context";
 import { ChecklistService } from "@/features/checklists/application/checklist-service";
-import { createInspectionSchema, openWeeklyChecklistSchema } from "@/features/checklists/domain/inspection";
-import type { z } from "zod";
+import {
+  createInspectionSchema,
+  openWeeklyChecklistSchema,
+  updateInspectionSchema
+} from "@/features/checklists/domain/inspection";
+import { ZodError, type z } from "zod";
 import type { syncPushSchema } from "@/features/sync/domain/sync";
 import { getDb } from "@/infrastructure/db/client";
 import {
   assets,
+  assetTemplateAssignments,
+  checklistTemplates,
   operationConfigs,
+  operationRequiredDays,
+  companies,
+  people,
+  sites,
   syncChangeLog,
   templateVersions
 } from "@/infrastructure/db/schema";
@@ -25,16 +35,62 @@ export class SyncService {
     const versions = await this.database
       .select({ id: templateVersions.id })
       .from(templateVersions)
+      .innerJoin(checklistTemplates, eq(checklistTemplates.id, templateVersions.templateId))
       .where(
         and(
           eq(templateVersions.status, "PUBLISHED"),
-          eq(templateVersions.organizationId, context.organizationId)
+          eq(templateVersions.organizationId, context.organizationId),
+          eq(checklistTemplates.status, "ACTIVE")
         )
       );
     const templateVersionsData = [];
     for (const version of versions) templateVersionsData.push(await this.templates.version(context, version.id));
-    const assetRows = await this.database.select().from(assets).where(eq(assets.organizationId, context.organizationId));
-    const configs = await this.database.select().from(operationConfigs).where(eq(operationConfigs.organizationId, context.organizationId));
+    const assetRows = await this.database
+      .select()
+      .from(assets)
+      .where(and(eq(assets.organizationId, context.organizationId), eq(assets.active, true)));
+    const configRows = await this.database
+      .select()
+      .from(operationConfigs)
+      .where(and(eq(operationConfigs.organizationId, context.organizationId), eq(operationConfigs.active, true)));
+    const requiredDays = await this.database.select().from(operationRequiredDays);
+    const weekdayNames = ["", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
+    const configs = configRows.map((config) => ({
+      ...config,
+      requiredWeekdays: requiredDays
+        .filter((day) => day.operationConfigId === config.id)
+        .map((day) => weekdayNames[day.weekday])
+    }));
+    const assignments = await this.database
+      .select()
+      .from(assetTemplateAssignments)
+      .where(
+        and(
+          eq(assetTemplateAssignments.organizationId, context.organizationId),
+          eq(assetTemplateAssignments.active, true)
+        )
+      );
+    const companyRows = await this.database
+      .select()
+      .from(companies)
+      .where(and(eq(companies.organizationId, context.organizationId), eq(companies.active, true)))
+      .orderBy(asc(companies.name));
+    const siteRows = await this.database
+      .select()
+      .from(sites)
+      .where(and(eq(sites.organizationId, context.organizationId), eq(sites.active, true)))
+      .orderBy(asc(sites.name));
+    const peopleRows = await this.database
+      .select()
+      .from(people)
+      .where(
+        and(
+          eq(people.organizationId, context.organizationId),
+          eq(people.active, true),
+          ne(people.name, "Responsável pelo preenchimento")
+        )
+      )
+      .orderBy(asc(people.name));
     const [last] = await this.database
       .select({ sequence: syncChangeLog.sequence })
       .from(syncChangeLog)
@@ -49,6 +105,10 @@ export class SyncService {
       templateVersions: templateVersionsData,
       assets: assetRows,
       operationConfigs: configs,
+      assetTemplateAssignments: assignments,
+      companies: companyRows,
+      sites: siteRows,
+      people: peopleRows,
       tombstones: []
     };
   }
@@ -60,7 +120,7 @@ export class SyncService {
         if (operation.entityType === "WEEKLY_CHECKLIST") {
           const weekly = await this.checklists.openWeekly(context, openWeeklyChecklistSchema.parse(operation.payload));
           results.push({ operationId: operation.operationId, status: "APPLIED", entityId: weekly.id, serverRevision: weekly.revision, problem: null });
-        } else {
+        } else if (operation.baseRevision == null) {
           const inspectionInput = createInspectionSchema.parse({
             ...operation.payload,
             clientInspectionId: operation.entityId,
@@ -75,14 +135,45 @@ export class SyncService {
             serverRevision: outcome.result.revision,
             problem: outcome.statusCode === 409 ? { code: "DUPLICATE_SLOT", conflictId: outcome.result.conflictId } : null
           });
+        } else if (operation.mutation === "UPSERT" || operation.mutation === "COMPLETE") {
+          const inspectionInput = updateInspectionSchema.parse({
+            ...operation.payload,
+            operationId: operation.operationId,
+            deviceId: input.deviceId,
+            baseRevision: operation.baseRevision,
+            lifecycleStatus:
+              operation.mutation === "COMPLETE"
+                ? "COMPLETED"
+                : operation.payload.lifecycleStatus
+          });
+          const updated = await this.checklists.updateInspection(
+            context,
+            operation.entityId,
+            inspectionInput
+          );
+          results.push({
+            operationId: operation.operationId,
+            status: "APPLIED",
+            entityId: updated.id,
+            serverRevision: updated.revision,
+            problem: null
+          });
+        } else {
+          throw new Error("A anulação de inspeções ainda não está disponível no aplicativo.");
         }
       } catch (error) {
+        const detail =
+          error instanceof ZodError
+            ? `${error.issues[0]?.path.join("/") || "payload"}: ${error.issues[0]?.message ?? "Dado inválido."}`
+            : error instanceof Error
+              ? error.message
+              : "Falha desconhecida";
         results.push({
           operationId: operation.operationId,
           status: "REJECTED",
           entityId: operation.entityId,
           serverRevision: null,
-          problem: { code: error instanceof Error ? error.name : "ERROR", detail: error instanceof Error ? error.message : "Falha desconhecida" }
+          problem: { code: error instanceof Error ? error.name : "ERROR", detail }
         });
       }
     }

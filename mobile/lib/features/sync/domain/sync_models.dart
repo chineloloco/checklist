@@ -9,10 +9,10 @@ final class SyncSnapshot {
   });
 
   const SyncSnapshot.idle()
-      : state = SyncRunState.idle,
-        pendingCount = 0,
-        lastSyncedAt = null,
-        message = null;
+    : state = SyncRunState.idle,
+      pendingCount = 0,
+      lastSyncedAt = null,
+      message = null;
 
   final SyncRunState state;
   final int pendingCount;
@@ -40,12 +40,14 @@ final class SyncOperationDto {
   final Map<String, Object?> payload;
 
   Map<String, Object?> toJson() => {
-        'operationId': operationId,
-        'entityType': entityType,
-        'mutation': mutation,
-        'entityId': entityId,
-        'baseRevision': baseRevision,
-        'clientOccurredAt': clientOccurredAt.toIso8601String(),
-        'payload': payload,
-      };
+    'operationId': operationId,
+    'entityType': entityType,
+    'mutation': mutation,
+    'entityId': entityId,
+    'baseRevision': baseRevision,
+    // Drift/SQLite pode reconstruir o DateTime como horário local. O
+    // contrato da API exige um ISO 8601 com offset explícito.
+    'clientOccurredAt': clientOccurredAt.toUtc().toIso8601String(),
+    'payload': payload,
+  };
 }

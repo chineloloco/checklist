@@ -15,6 +15,27 @@
       "when": 1794693469319,
       "tag": "0001_huge_lizard",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794763977691,
+      "tag": "0002_mobile_password_auth",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794763977692,
+      "tag": "0003_published_template_configs",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794763977693,
+      "tag": "0004_remove_placeholder_person",
+      "breakpoints": true
     }
   ]
 }

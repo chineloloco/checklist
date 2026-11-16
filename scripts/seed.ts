@@ -15,7 +15,6 @@ import {
   operationConfigs,
   operationRequiredDays,
   organizations,
-  people,
   sites,
   templateItems,
   templateSections,
@@ -104,25 +103,9 @@ const inspector = await firstOrCreate(
       .values({
         organizationId: organization.id,
         email: inspectorEmail,
-        displayName: "Responsável pelo preenchimento",
+        displayName: "Inspetor",
         passwordHash: await hash(process.env.SEED_INSPECTOR_PASSWORD ?? "ChangeMe-Responsavel-123!", 12),
         roles: ["INSPECTOR"]
-      })
-      .returning()
-);
-
-const responsible = await firstOrCreate(
-  () => database.select().from(people).where(and(eq(people.organizationId, organization.id), eq(people.userId, inspector.id))).limit(1),
-  () =>
-    database
-      .insert(people)
-      .values({
-        organizationId: organization.id,
-        userId: inspector.id,
-        name: "Responsável pelo preenchimento",
-        kind: "DRIVER",
-        driverLicenseNumber: "00000000000",
-        driverLicenseExpiryDate: "2028-05-20"
       })
       .returning()
 );
@@ -250,7 +233,7 @@ await database
     set: { operationConfigId: config.id, active: true, updatedAt: new Date() }
   });
 
-console.log(`Seed complete: organization=${organization.id} VL=${publishedVl.templateId} asset=${asset.id} responsible=${responsible.id}`);
+console.log(`Seed complete: organization=${organization.id} VL=${publishedVl.templateId} asset=${asset.id} inspector=${inspector.id}`);
 }
 
 main().catch((error) => {

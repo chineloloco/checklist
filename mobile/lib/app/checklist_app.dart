@@ -55,14 +55,26 @@ class _ChecklistAppState extends State<ChecklistApp>
       _loading = false;
     });
     if (session != null) {
-      unawaited(widget.dependencies.syncCoordinator.syncNow());
+      unawaited(_refreshAfterRestore());
     }
   }
 
-  Future<void> _signIn() async {
+  Future<void> _refreshAfterRestore() async {
+    try {
+      await widget.dependencies.syncCoordinator.bootstrap();
+    } on Object {
+      // Os dados locais continuam disponíveis quando o aparelho inicia offline.
+    }
+    await widget.dependencies.syncCoordinator.syncNow();
+  }
+
+  Future<void> _signIn(String email, String password) async {
     setState(() => _error = null);
     try {
-      final session = await widget.dependencies.auth.signIn();
+      final session = await widget.dependencies.auth.signIn(
+        email: email,
+        password: password,
+      );
       final identity = await widget.dependencies.checklistApi.me();
       final userId = identity['userId']?.toString() ?? session.subject;
       final activeUser = await widget.dependencies.secureStorage.read(
@@ -142,7 +154,8 @@ class _LaunchScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.fact_check_outlined, size: 48, color: FieldColors.steel),
+              Icon(Icons.fact_check_outlined,
+                  size: 48, color: FieldColors.steel),
               SizedBox(height: 18),
               CircularProgressIndicator(),
               SizedBox(height: 12),

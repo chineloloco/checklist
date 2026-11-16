@@ -17,7 +17,7 @@ Web e API:
 src/features/<feature>/
   domain/          entidades, regras e políticas
   application/     casos de uso e portas
-  infrastructure/  Postgres, OIDC, fila e adaptadores
+  infrastructure/  Postgres, autenticação, fila e adaptadores
   presentation/    rotas Next.js, DTOs e componentes web
 ```
 
@@ -74,7 +74,7 @@ erDiagram
 |---|---|
 | `organization` | `id`, `name`, `timezone`, `week_starts_on`; escopo obrigatório de todas as consultas |
 | `site` | local da operação, arquivável |
-| `user_account` | identidade de acesso do provedor OIDC, estado e último login |
+| `user_account` | identidade de acesso interna, estado e último login |
 | `person` | motorista/operador/supervisor identificado no formulário; não implica conta de acesso |
 | `role_assignment` | papel e escopo (`organization`, `site` ou próprio usuário) |
 | `asset` | `kind` veículo/equipamento, código interno e estado |
@@ -130,7 +130,7 @@ Toda transação define o contexto da organização a partir do token. A aplica�
 | Resposta | `null`, `C`, `NC`, `NA` | avaliação de um item |
 | Resultado agregado | derivado, nunca gravado como verdade independente | contagens C/NC/NA e itens sem resposta |
 
-Uma inspeção pode estar `COMPLETED` e ainda `QUEUED`; uma resposta `NC` não significa bloqueio, reprovação, foto obrigatória ou ação automática.
+Uma inspeção pode estar `COMPLETED` e ainda `QUEUED`; uma resposta `NC` pode exigir observação quando a versão do modelo configurar essa regra, mas fotos são sempre opcionais.
 
 ## Offline e sincronização
 
@@ -180,7 +180,7 @@ Uma mesclagem nunca escolhe silenciosamente entre respostas divergentes. Cada it
 
 ## Autenticação e permissões
 
-Use um provedor compatível com OpenID Connect/OAuth 2.1. Web usa Authorization Code e sessão `HttpOnly`, `Secure`, `SameSite=Lax`; Flutter usa Authorization Code com PKCE e refresh token rotativo no armazenamento seguro. A API valida emissor, audiência, expiração e assinatura por JWKS. O acesso offline permite abrir dados locais após autenticação prévia; sincronização exige token válido.
+As contas são administradas internamente e as senhas são armazenadas apenas como hashes bcrypt. O web usa sessão `HttpOnly`, `Secure`, `SameSite=Lax`; o Flutter recebe access token curto e refresh token rotativo, mantidos no armazenamento seguro. A API valida assinatura, audiência e expiração. Refresh tokens ficam somente como hash no servidor, podem ser revogados e têm reutilização detectada por família. O acesso offline permite abrir dados locais após autenticação prévia; sincronização exige token válido.
 
 Conta de acesso e pessoa do formulário são entidades separadas. Uma conta pode ser vinculada a uma pessoa, mas preencher “Motorista: João” não cria login para João.
 
@@ -199,7 +199,8 @@ O backend aplica autorização por organização e, quando configurado, por loca
 
 - Data da inspeção deve pertencer à semana e ao fuso fixados.
 - Resposta aceita somente `C`, `NC`, `NA` ou `null` em rascunho.
-- Conclusão valida campos obrigatórios conforme a versão/configuração; até confirmação, fotos e observação de `NC` não são exigidas.
+- Conclusão valida campos obrigatórios conforme a versão/configuração, incluindo observação quando exigida para `NC`; fotos não bloqueiam a conclusão.
+- Empresa, local e motorista/operador do último bootstrap ficam no banco local para que a identificação e o preenchimento funcionem sem rede; criar novos cadastros exige conexão.
 - Cada resposta deve apontar para item da versão fixada no checklist.
 - Modelo `TE` pode ser importado como rascunho, mas não publicado até confirmação do nome.
 - `If-Match`/`base_revision` é obrigatório em alterações de registro sincronizado.
@@ -224,7 +225,7 @@ A API retorna seções/itens em ordem e uma lista de colunas por inspeção/data
 
 ### Etapas de implementação
 
-1. **Fundação** — monorepo, CI, migrações, observabilidade, OIDC, organizações, papéis e erros padronizados.
+1. **Fundação** — monorepo, CI, migrações, observabilidade, autenticação interna, organizações, papéis e erros padronizados.
 2. **Modelos VL** — entidades de modelo/versão, importador do catálogo, editor web, publicação imutável e download com checksum.
 3. **Cadastros** — locais, pessoas, ativos e revisões históricas; seed de um veículo leve.
 4. **Operação central** — checklist semanal, slots, inspeções, respostas, snapshots, conclusão e visão semanal.
@@ -232,7 +233,7 @@ A API retorna seções/itens em ordem e uma lista de colunas por inspeção/data
 6. **Sincronização** — push/pull, idempotência, revisões, tombstones, conflito de slot e tela de resolução.
 7. **Auditoria** — correções, justificativas, eventos append-only e permissões refinadas.
 8. **Expansão** — validar ambiguidades e publicar os outros 13 modelos; manter `TE` bloqueado até identificação.
-9. **Assinaturas/fotos** — implementar somente após decisão de escopo, método e regras de `NC`.
+9. **Assinaturas e armazenamento de objetos** — definir escopo/método de assinatura e migrar fotos para upload dedicado com retomada e checksum quando o volume exigir.
 
 ## Decisões pendentes que viram configuração
 

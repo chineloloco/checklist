@@ -4,9 +4,9 @@ O aplicativo implementa as partes independentes do fluxo offline e segue os cami
 
 ## 1. Identidade móvel e Bearer token
 
-O OpenAPI define Authorization Code com PKCE, mas `authorizationUrl` e `tokenUrl` ainda usam `identity.example.com`. É necessário confirmar `issuer`, `client_id`, redirect URIs, audiência, scopes, rotação/revogação do refresh token e logout.
+O sistema usa as contas internas da tabela `users`. O mobile autentica por `POST /api/v1/auth/login`, renova a sessão por `POST /api/v1/auth/refresh` e encerra por `POST /api/v1/auth/logout`. Access tokens assinados têm duração de 15 minutos; refresh tokens aleatórios duram 30 dias, são armazenados somente como hash no servidor e rotacionam a cada uso.
 
-O backend atual obtém identidade apenas por `getServerSession(NextAuth)`. As rotas `/api/v1` ainda precisam aceitar e validar `Authorization: Bearer ...` por emissor, audiência, expiração e JWKS, conforme a arquitetura.
+As rotas `/api/v1` aceitam tanto a sessão web do NextAuth quanto `Authorization: Bearer ...` do mobile. Para produção ainda é necessário adicionar limitação distribuída de tentativas de login no proxy/gateway e um fluxo administrativo de criação, troca e recuperação de senha.
 
 ## 2. Escopo autorizado no bootstrap
 
@@ -18,22 +18,13 @@ O `MobileBootstrap` traz versões, ativos e configurações, porém não inclui:
 - nomes de empresa/local referenciados pelos IDs;
 - checklists e inspeções existentes necessários a um novo aparelho.
 
-No primeiro recorte, o aplicativo consegue usar VL quando há uma única versão/configuração publicada e permite digitar empresa, local e responsável. Isso não substitui a definição contratual dos cadastros autorizados.
+O aplicativo agora lista todos os modelos publicados com configuração ativa. Empresa, local, motorista/operador e ativo são escolhidos em listas e podem ser cadastrados no próprio aplicativo usando as rotas de cadastro existentes. Essas consultas e inclusões exigem conexão; o bootstrap ainda deve incorporar esses catálogos para que os seletores também funcionem integralmente offline.
 
 ## 3. Semântica de `/sync/push`
 
-O OpenAPI aceita `mutation: UPSERT | COMPLETE | VOID`. A implementação atual do `SyncService.push` chama `createInspection` para qualquer operação de inspeção e não diferencia atualização, conclusão ou anulação.
+O servidor diferencia a primeira criação (sem `baseRevision`) de atualizações posteriores. `UPSERT` atualiza o rascunho, `COMPLETE` conclui usando a revisão conhecida pelo aparelho e ambas as operações possuem recibo idempotente por dispositivo/operação. O retorno atualiza `serverRevision` no banco local.
 
-É necessário implementar no servidor:
-
-- criação pelo `clientInspectionId` na primeira operação;
-- atualização de rascunho com `baseRevision`;
-- conclusão independente por `COMPLETE`;
-- anulação somente com regra e motivo definidos;
-- recibo idempotente para cada mutação;
-- retorno coerente de `serverRevision`.
-
-Sem esse alinhamento, o primeiro envio pode criar a inspeção, mas alterações posteriores não têm comportamento garantido pelo backend atual.
+Continua pendente definir a regra e o motivo obrigatório para `VOID`; até essa definição, a anulação é recusada explicitamente.
 
 ## 4. Conteúdo do pull incremental
 
@@ -45,19 +36,13 @@ Também deve ser confirmado se um novo bootstrap inclui semanas/inspeções já 
 
 `OperationConfig` exige `requiredWeekdays`, mas o bootstrap atual seleciona diretamente `operation_configs`; os dias ficam em `operation_required_days`. O serviço deve agregá-los conforme o schema OpenAPI.
 
-Também falta explicitar no bootstrap a relação ativo → configuração para evitar oferecer modelos incompatíveis.
+Ao publicar um modelo, o servidor cria uma configuração operacional padrão quando ainda não existe. A migração `0003_published_template_configs` faz o mesmo para modelos que já estavam publicados, permitindo que todos apareçam no manifesto mobile. A relação ativo → configuração continua sendo criada quando o usuário escolhe ou cadastra o ativo no aplicativo.
 
 ## 6. Assinaturas, fotos e arquivos
 
-Continuam pendentes:
+Fotos opcionais de inspeção foram ativadas no mobile: câmera/galeria, até cinco imagens de 2,5 MB, persistência offline e envio junto à revisão da inspeção. A ausência de foto nunca bloqueia a conclusão.
 
-- assinatura diária ou semanal;
-- papéis que assinam;
-- método/evidência da assinatura;
-- obrigatoriedade de observação ou foto para `NC`;
-- endpoints de criação, upload, retomada, checksum e confirmação de anexos.
-
-A tabela local de anexos e seus estados foi criada, mas nenhuma coleta ou chamada HTTP foi ativada.
+Continuam pendentes assinatura diária ou semanal, papéis e método de assinatura, além de um armazenamento de objetos dedicado com upload retomável e checksum. O contrato atual mantém as fotos na revisão versionada da inspeção e é adequado ao limite pequeno adotado no aplicativo.
 
 ## 7. Saída e troca de usuário
 

@@ -7,10 +7,7 @@ abstract interface class SyncRemote {
     required List<SyncOperationDto> operations,
   });
 
-  Future<Map<String, Object?>> pull({
-    required String cursor,
-    int limit = 200,
-  });
+  Future<Map<String, Object?>> pull({required String cursor, int limit = 200});
 }
 
 final class SyncApi implements SyncRemote {

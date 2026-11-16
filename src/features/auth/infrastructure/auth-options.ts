@@ -41,7 +41,7 @@ const providers: NextAuthOptions["providers"] = [];
 const oidc = oidcProvider();
 if (oidc) providers.push(oidc);
 
-if (process.env.AUTH_ALLOW_CREDENTIALS === "true" && process.env.NODE_ENV !== "production") {
+if (process.env.AUTH_ALLOW_CREDENTIALS === "true") {
   providers.push(
     CredentialsProvider({
       name: "Acesso local",

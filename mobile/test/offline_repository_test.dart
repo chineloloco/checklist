@@ -15,6 +15,9 @@ void main() {
     final repository = DriftChecklistRepository(database);
     final ids = await createTwoDates(database, repository);
 
+    final availableForms = await repository.listAllTemplateChoices();
+    expect(availableForms.single.displayName, 'VL · Veículos leves');
+
     final first = await repository.getInspection(ids.firstId);
     final second = await repository.getInspection(ids.secondId);
     expect(first.items, hasLength(34));
@@ -64,6 +67,13 @@ void main() {
           'versionNumber': 2,
           'status': 'PUBLISHED',
           'revision': 2,
+          'template': {
+            'id': templateId,
+            'code': 'VL',
+            'name': 'Veículos leves',
+            'assetKind': 'VEHICLE',
+            'status': 'ACTIVE',
+          },
           'sections': [
             {
               'id': '10000000-0000-4000-8000-000000000013',
@@ -75,20 +85,69 @@ void main() {
         },
       ],
       'assets': <Object?>[],
-      'operationConfigs': <Object?>[],
+      'operationConfigs': [
+        {
+          'id': configId,
+          'templateId': templateId,
+          'timezone': 'America/Fortaleza',
+          'weekStartsOn': 'MONDAY',
+          'requiredWeekdays': ['MONDAY', 'WEDNESDAY', 'FRIDAY'],
+          'maxOccurrencesPerDate': 1,
+        },
+      ],
+      'assetTemplateAssignments': [
+        {
+          'id': '10000000-0000-4000-8000-000000000006',
+          'assetId': assetId,
+          'templateId': templateId,
+          'operationConfigId': configId,
+          'active': true,
+        },
+      ],
       'tombstones': <Object?>[],
     });
 
-    final currentChoice =
-        (await repository.listTemplateChoices(assetId)).single;
+    final currentChoice = (await repository.listTemplateChoices(
+      assetId,
+    )).single;
     final existingInspection = await repository.getInspection(ids.firstId);
     expect(currentChoice.versionNumber, 2);
     expect(existingInspection.templateVersionNumber, 1);
     expect(existingInspection.items, hasLength(34));
   });
 
+  test('remove modelo arquivado das escolhas e preserva o histórico', () async {
+    final database = AppDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    final repository = DriftChecklistRepository(database);
+    final ids = await createTwoDates(database, repository);
+
+    final before = await repository.listTemplateChoices(assetId);
+    expect(before.single.displayName, 'VL · Veículos leves');
+
+    await repository.applyBootstrap({
+      'cursor': '12',
+      'templateVersions': <Object?>[],
+      'assets': <Object?>[],
+      'operationConfigs': <Object?>[],
+      'assetTemplateAssignments': <Object?>[],
+      'tombstones': <Object?>[],
+    });
+
+    expect(await repository.listTemplateChoices(assetId), isEmpty);
+    final archivedVersion = await (database.select(
+      database.localTemplateVersions,
+    )..where((table) => table.id.equals(versionId))).getSingle();
+    expect(archivedVersion.status, 'ARCHIVED');
+    final existingInspection = await repository.getInspection(ids.firstId);
+    expect(existingInspection.items, hasLength(34));
+    expect(existingInspection.templateDisplayName, 'VL · Veículos leves');
+  });
+
   test('recupera rascunho e outbox depois de reiniciar', () async {
-    final temp = await Directory.systemTemp.createTemp('checklist-mobile-test-');
+    final temp = await Directory.systemTemp.createTemp(
+      'checklist-mobile-test-',
+    );
     addTearDown(() => temp.delete(recursive: true));
     final file = File('${temp.path}/offline.sqlite');
 
@@ -101,7 +160,9 @@ void main() {
       itemId: draft.items[4].id,
       result: InspectionResult.notApplicable,
     );
-    final pendingBefore = await database.select(database.syncOutboxOperations).get();
+    final pendingBefore = await database
+        .select(database.syncOutboxOperations)
+        .get();
     expect(pendingBefore, isNotEmpty);
     await database.close();
 
@@ -109,9 +170,77 @@ void main() {
     repository = DriftChecklistRepository(database);
     addTearDown(database.close);
     final restored = await repository.getInspection(ids.firstId);
-    final pendingAfter = await database.select(database.syncOutboxOperations).get();
+    final pendingAfter = await database
+        .select(database.syncOutboxOperations)
+        .get();
     expect(restored.items[4].result, InspectionResult.notApplicable);
-    expect(pendingAfter.map((item) => item.operationId),
-        containsAll(pendingBefore.map((item) => item.operationId)));
+    expect(
+      pendingAfter.map((item) => item.operationId),
+      containsAll(pendingBefore.map((item) => item.operationId)),
+    );
+  });
+
+  test('anexa foto no payload e apaga formulário ainda não enviado', () async {
+    final database = AppDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    final repository = DriftChecklistRepository(database);
+    final ids = await createTwoDates(database, repository);
+    final temp = await Directory.systemTemp.createTemp('inspection-photo-');
+    addTearDown(() async {
+      if (await temp.exists()) await temp.delete(recursive: true);
+    });
+    final photo = File('${temp.path}/evidence.jpg');
+    await photo.writeAsBytes([1, 2, 3, 4]);
+
+    await repository.addPhotoAttachment(
+      inspectionId: ids.firstId,
+      localPath: photo.path,
+      mediaType: 'image/jpeg',
+    );
+
+    final draft = await repository.getInspection(ids.firstId);
+    expect(draft.attachments, hasLength(1));
+    final outbox = await (database.select(
+      database.syncOutboxOperations,
+    )..where((table) => table.entityId.equals(ids.firstId))).getSingle();
+    expect(outbox.payloadJson, contains('AQIDBA=='));
+
+    await repository.deleteUnsyncedInspection(ids.firstId);
+
+    expect(await photo.exists(), isFalse);
+    expect(
+      await (database.select(
+        database.localInspections,
+      )..where((table) => table.id.equals(ids.firstId))).getSingleOrNull(),
+      isNull,
+    );
+    expect((await repository.getInspection(ids.secondId)).id, ids.secondId);
+  });
+
+  test('foto permanece opcional mesmo em item NC configurado', () async {
+    final database = AppDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    final repository = DriftChecklistRepository(database);
+    final ids = await createTwoDates(database, repository);
+    final draft = await repository.getInspection(ids.firstId);
+    await database.customStatement(
+      'UPDATE local_template_items SET require_photo_when_nc = 1 WHERE id = ?',
+      [draft.items.first.id],
+    );
+
+    for (final item in draft.items) {
+      await repository.saveAnswer(
+        inspectionId: draft.id,
+        itemId: item.id,
+        result: item.id == draft.items.first.id
+            ? InspectionResult.nonCompliant
+            : InspectionResult.compliant,
+      );
+    }
+    await repository.completeInspection(draft.id);
+
+    final completed = await repository.getInspection(draft.id);
+    expect(completed.lifecycle, InspectionLifecycle.completed);
+    expect(completed.attachments, isEmpty);
   });
 }

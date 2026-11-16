@@ -1,6 +1,6 @@
 # Checklists operacionais
 
-Plataforma web e API para checklists semanais de veículos e equipamentos. O núcleo implementado usa Next.js 16, TypeScript, PostgreSQL/Neon, Drizzle ORM e autenticação OIDC/NextAuth. A estrutura separa apresentação, rotas HTTP, serviços de aplicação, regras de domínio e repositórios por funcionalidade.
+Plataforma web e API para checklists semanais de veículos e equipamentos. O núcleo implementado usa Next.js 16, TypeScript, PostgreSQL/Neon, Drizzle ORM e autenticação própria por usuário e senha/NextAuth. A estrutura separa apresentação, rotas HTTP, serviços de aplicação, regras de domínio e repositórios por funcionalidade.
 
 O catálogo inicial foi extraído da planilha `MODELOS DE CHECK LIST.xlsx`: são 14 modelos e 538 itens com a redação preservada. O modelo **VL — Veículos leves** é publicado pelo seed com seus 34 itens reais. O modelo **TE** permanece identificado como pendente de confirmação.
 
@@ -29,13 +29,13 @@ Requisitos: Node.js 20.9 ou superior e um banco PostgreSQL 15 ou superior. Para 
    npm run dev
    ```
 
-5. Acesse `http://localhost:3000`. Com `AUTH_ALLOW_CREDENTIALS=true`, o seed cria somente para desenvolvimento:
+5. Acesse `http://localhost:3000`. Com `AUTH_ALLOW_CREDENTIALS=true`, o seed cria:
 
    - administrador: `admin@checklist.local`
    - responsável: `responsavel@checklist.local`
    - senhas: os valores definidos em `SEED_ADMIN_PASSWORD` e `SEED_INSPECTOR_PASSWORD`
 
-Credenciais locais são bloqueadas em produção. Configure `OIDC_ISSUER`, `OIDC_CLIENT_ID` e `OIDC_CLIENT_SECRET` para o provedor corporativo.
+O mesmo usuário e senha funciona no web e no mobile. Em produção, defina senhas fortes, `NEXTAUTH_SECRET` e `MOBILE_AUTH_SECRET` independentes, use HTTPS e mantenha o cadastro de usuários restrito aos administradores.
 
 ## Verificação
 
@@ -79,14 +79,14 @@ O contrato da API está em [openapi/openapi.yaml](openapi/openapi.yaml). As deci
 
 ## Dependências externas e decisões pendentes
 
-- Neon/PostgreSQL e um provedor OIDC precisam ser configurados fora do repositório; nenhuma credencial é enviada ao navegador.
-- O armazenamento de binários em S3 compatível está preparado nas variáveis de ambiente, mas fotos e assinatura desenhada não foram ativadas. A especificação ainda não confirmou escopo diário/semanal, método de assinatura nem exigência de foto/observação para `NC`.
+- Neon/PostgreSQL precisa ser configurado fora do repositório; nenhuma credencial do banco é enviada ao navegador ou ao aplicativo.
+- O mobile aceita até cinco fotos por inspeção e as envia na revisão versionada. O armazenamento dedicado em S3 compatível e a assinatura desenhada continuam pendentes de definição.
 - Também permanecem configuráveis, sem suposição operacional: dias obrigatórios, mais de uma inspeção na data, campos obrigatórios e ações para `NC`.
 - Não há bloqueio do veículo, aprovação automática ou reprovação implícita.
-- O aplicativo Flutter/Drift está no primeiro recorte offline de VL; assinaturas, arquivos e a homologação OIDC/Bearer dependem das definições listadas abaixo.
+- O aplicativo Flutter/Drift está no primeiro recorte offline de VL; assinaturas, arquivos e alguns contratos de sincronização ainda dependem das definições listadas abaixo.
 
 ## Aplicativo móvel Flutter
 
-O cliente de preenchimento offline está em [`mobile/`](mobile/README.md). Ele usa Flutter, Dart, SQLite cifrado com Drift, OIDC/PKCE, outbox transacional e sincronização push/pull. A criação e administração de modelos continuam exclusivas da plataforma web.
+O cliente de preenchimento offline está em [`mobile/`](mobile/README.md). Ele usa Flutter, Dart, SQLite cifrado com Drift, login próprio com tokens rotativos, outbox transacional e sincronização push/pull. A criação e administração de modelos continuam exclusivas da plataforma web.
 
 Antes da homologação ponta a ponta, consulte as [lacunas contratuais do aplicativo móvel](docs/mobile-contract-gaps.md), especialmente identidade Bearer/JWKS, associação ativo-modelo, conteúdo do pull e semântica de mutações no `sync/push`.

@@ -1,15 +1,15 @@
-import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../core/config/app_config.dart';
 import '../core/network/authenticated_api_client.dart';
-import '../features/auth/data/oidc_auth_repository.dart';
+import '../features/auth/data/password_auth_repository.dart';
 import '../features/auth/domain/auth_session.dart';
 import '../features/checklists/application/checklist_service.dart';
 import '../features/checklists/data/drift_checklist_repository.dart';
 import '../features/checklists/data/local/app_database.dart';
 import '../features/checklists/data/local/database_factory.dart';
 import '../features/checklists/data/remote/checklist_api.dart';
+import '../features/checklists/data/remote/registry_api.dart';
 import '../features/checklists/domain/checklist_repository.dart';
 import '../features/sync/application/sync_coordinator.dart';
 import '../features/sync/data/device_identity.dart';
@@ -24,6 +24,7 @@ final class AppDependencies {
     required this.checklistRepository,
     required this.checklistService,
     required this.checklistApi,
+    required this.registryApi,
     required this.syncCoordinator,
   });
 
@@ -34,27 +35,30 @@ final class AppDependencies {
   final ChecklistRepository checklistRepository;
   final ChecklistService checklistService;
   final ChecklistApi checklistApi;
+  final RegistryApi registryApi;
   final SyncCoordinator syncCoordinator;
 
   static Future<AppDependencies> create() async {
     final config = AppConfig.fromEnvironment();
     const secureStorage = FlutterSecureStorage();
     final database = await DatabaseFactory.open(secureStorage);
-    final auth = OidcAuthRepository(
+    final deviceIdentity = DeviceIdentity(secureStorage);
+    final auth = PasswordAuthRepository(
       config: config,
       secureStorage: secureStorage,
-      appAuth: const FlutterAppAuth(),
+      deviceId: () => deviceIdentity.id,
     );
     final client = AuthenticatedApiClient(config: config, auth: auth);
     final checklistRepository = DriftChecklistRepository(database);
     final checklistService = ChecklistService(checklistRepository);
     final checklistApi = ChecklistApi(client);
+    final registryApi = RegistryApi(client, database);
     final syncCoordinator = SyncCoordinator(
       database: database,
       syncApi: SyncApi(client),
       checklistApi: checklistApi,
       checklistRepository: checklistRepository,
-      deviceIdentity: DeviceIdentity(secureStorage),
+      deviceIdentity: deviceIdentity,
     );
     await syncCoordinator.initialize();
     return AppDependencies._(
@@ -65,6 +69,7 @@ final class AppDependencies {
       checklistRepository: checklistRepository,
       checklistService: checklistService,
       checklistApi: checklistApi,
+      registryApi: registryApi,
       syncCoordinator: syncCoordinator,
     );
   }

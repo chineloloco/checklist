@@ -10,7 +10,7 @@ export default async function LoginPage() {
   const session = await getServerSession(authOptions);
   if (session?.user) redirect("/");
   const oidcEnabled = Boolean(process.env.OIDC_ISSUER && process.env.OIDC_CLIENT_ID && process.env.OIDC_CLIENT_SECRET);
-  const credentialsEnabled = process.env.AUTH_ALLOW_CREDENTIALS === "true" && process.env.NODE_ENV !== "production";
+  const credentialsEnabled = process.env.AUTH_ALLOW_CREDENTIALS === "true";
   return <main className="login-page">
     <section className="login-panel">
       <div className="login-brand"><span className="brand-mark">C</span> Checklists operacionais</div>

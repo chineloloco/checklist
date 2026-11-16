@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, ne } from "drizzle-orm";
 import { getDb } from "@/infrastructure/db/client";
 import {
   assetRevisions,
@@ -8,7 +8,8 @@ import {
   companies,
   operationConfigs,
   people,
-  sites
+  sites,
+  syncChangeLog
 } from "@/infrastructure/db/schema";
 
 type Context = { organizationId: string; userId: string };
@@ -37,7 +38,7 @@ export class PostgresRegistryRepository {
     });
   }
   listPeople(context: Context) {
-    return this.database.select().from(people).where(eq(people.organizationId, context.organizationId)).orderBy(asc(people.name));
+    return this.database.select().from(people).where(and(eq(people.organizationId, context.organizationId), eq(people.active, true), ne(people.name, "Responsável pelo preenchimento"))).orderBy(asc(people.name));
   }
   createPerson(context: Context, input: Omit<typeof people.$inferInsert, "id" | "organizationId" | "createdAt" | "updatedAt">) {
     return this.database.transaction(async (tx) => {
@@ -80,6 +81,14 @@ export class PostgresRegistryRepository {
         })
         .returning();
       await tx.insert(auditEvents).values({ organizationId: context.organizationId, entityType: "ASSET_TEMPLATE_ASSIGNMENT", entityId: assignment.id, action: "UPSERTED", actorUserId: context.userId });
+      await tx.insert(syncChangeLog).values({
+        organizationId: context.organizationId,
+        entityType: "ASSET_TEMPLATE_ASSIGNMENT",
+        entityId: assignment.id,
+        revision: 1,
+        changeType: "UPSERT",
+        payload: assignment
+      });
       return assignment;
     });
   }

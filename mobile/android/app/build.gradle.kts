@@ -17,8 +17,6 @@ android {
     defaultConfig {
         applicationId = "com.example.checklist_mobile"
 
-        manifestPlaceholders["appAuthRedirectScheme"] = "com.example.checklist"
-
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

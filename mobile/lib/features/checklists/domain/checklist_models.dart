@@ -4,23 +4,23 @@ enum InspectionResult { compliant, nonCompliant, notApplicable }
 
 extension InspectionResultX on InspectionResult {
   String get code => switch (this) {
-        InspectionResult.compliant => 'C',
-        InspectionResult.nonCompliant => 'NC',
-        InspectionResult.notApplicable => 'NA',
-      };
+    InspectionResult.compliant => 'C',
+    InspectionResult.nonCompliant => 'NC',
+    InspectionResult.notApplicable => 'NA',
+  };
 
   String get label => switch (this) {
-        InspectionResult.compliant => 'Conforme',
-        InspectionResult.nonCompliant => 'Não conforme',
-        InspectionResult.notApplicable => 'Não aplicável',
-      };
+    InspectionResult.compliant => 'Conforme',
+    InspectionResult.nonCompliant => 'Não conforme',
+    InspectionResult.notApplicable => 'Não aplicável',
+  };
 
   static InspectionResult? fromCode(String? value) => switch (value) {
-        'C' => InspectionResult.compliant,
-        'NC' => InspectionResult.nonCompliant,
-        'NA' => InspectionResult.notApplicable,
-        _ => null,
-      };
+    'C' => InspectionResult.compliant,
+    'NC' => InspectionResult.nonCompliant,
+    'NA' => InspectionResult.notApplicable,
+    _ => null,
+  };
 }
 
 enum InspectionLifecycle { draft, completed, corrected, voided }
@@ -29,56 +29,49 @@ extension InspectionLifecycleX on InspectionLifecycle {
   String get code => name.toUpperCase();
 
   String get label => switch (this) {
-        InspectionLifecycle.draft => 'Rascunho',
-        InspectionLifecycle.completed => 'Concluída',
-        InspectionLifecycle.corrected => 'Corrigida',
-        InspectionLifecycle.voided => 'Anulada',
-      };
+    InspectionLifecycle.draft => 'Rascunho',
+    InspectionLifecycle.completed => 'Concluída',
+    InspectionLifecycle.corrected => 'Corrigida',
+    InspectionLifecycle.voided => 'Anulada',
+  };
 
   static InspectionLifecycle fromCode(String value) => switch (value) {
-        'COMPLETED' => InspectionLifecycle.completed,
-        'CORRECTED' => InspectionLifecycle.corrected,
-        'VOIDED' => InspectionLifecycle.voided,
-        _ => InspectionLifecycle.draft,
-      };
+    'COMPLETED' => InspectionLifecycle.completed,
+    'CORRECTED' => InspectionLifecycle.corrected,
+    'VOIDED' => InspectionLifecycle.voided,
+    _ => InspectionLifecycle.draft,
+  };
 }
 
-enum LocalSyncState {
-  localOnly,
-  queued,
-  syncing,
-  synced,
-  conflict,
-  error,
-}
+enum LocalSyncState { localOnly, queued, syncing, synced, conflict, error }
 
 extension LocalSyncStateX on LocalSyncState {
   String get code => switch (this) {
-        LocalSyncState.localOnly => 'LOCAL_ONLY',
-        LocalSyncState.queued => 'QUEUED',
-        LocalSyncState.syncing => 'SYNCING',
-        LocalSyncState.synced => 'SYNCED',
-        LocalSyncState.conflict => 'CONFLICT',
-        LocalSyncState.error => 'ERROR',
-      };
+    LocalSyncState.localOnly => 'LOCAL_ONLY',
+    LocalSyncState.queued => 'QUEUED',
+    LocalSyncState.syncing => 'SYNCING',
+    LocalSyncState.synced => 'SYNCED',
+    LocalSyncState.conflict => 'CONFLICT',
+    LocalSyncState.error => 'ERROR',
+  };
 
   String get label => switch (this) {
-        LocalSyncState.localOnly => 'Somente neste aparelho',
-        LocalSyncState.queued => 'Envio pendente',
-        LocalSyncState.syncing => 'Enviando',
-        LocalSyncState.synced => 'Sincronizada',
-        LocalSyncState.conflict => 'Conflito',
-        LocalSyncState.error => 'Falha no envio',
-      };
+    LocalSyncState.localOnly => 'Somente neste aparelho',
+    LocalSyncState.queued => 'Envio pendente',
+    LocalSyncState.syncing => 'Enviando',
+    LocalSyncState.synced => 'Sincronizada',
+    LocalSyncState.conflict => 'Conflito',
+    LocalSyncState.error => 'Falha no envio',
+  };
 
   static LocalSyncState fromCode(String value) => switch (value) {
-        'QUEUED' => LocalSyncState.queued,
-        'SYNCING' => LocalSyncState.syncing,
-        'SYNCED' => LocalSyncState.synced,
-        'CONFLICT' => LocalSyncState.conflict,
-        'ERROR' => LocalSyncState.error,
-        _ => LocalSyncState.localOnly,
-      };
+    'QUEUED' => LocalSyncState.queued,
+    'SYNCING' => LocalSyncState.syncing,
+    'SYNCED' => LocalSyncState.synced,
+    'CONFLICT' => LocalSyncState.conflict,
+    'ERROR' => LocalSyncState.error,
+    _ => LocalSyncState.localOnly,
+  };
 }
 
 final class AssetSummary {
@@ -109,7 +102,42 @@ final class AssetSummary {
   final String ownershipType;
 
   String get description =>
-      licensePlate ?? makeModel ?? manufacturer ?? 'Sem identificação complementar';
+      licensePlate ??
+      makeModel ??
+      manufacturer ??
+      'Sem identificação complementar';
+}
+
+final class RegistryCompany {
+  const RegistryCompany({required this.id, required this.name});
+  final String id;
+  final String name;
+}
+
+final class RegistrySite {
+  const RegistrySite({
+    required this.id,
+    required this.companyId,
+    required this.name,
+  });
+  final String id;
+  final String companyId;
+  final String name;
+}
+
+final class RegistryPerson {
+  const RegistryPerson({
+    required this.id,
+    required this.name,
+    required this.kind,
+    this.driverLicenseNumber,
+    this.driverLicenseExpiryDate,
+  });
+  final String id;
+  final String name;
+  final String kind;
+  final String? driverLicenseNumber;
+  final String? driverLicenseExpiryDate;
 }
 
 final class TemplateChoice {
@@ -120,6 +148,9 @@ final class TemplateChoice {
     required this.versionNumber,
     required this.timezone,
     required this.maxOccurrencesPerDate,
+    required this.code,
+    required this.name,
+    required this.assetKind,
   });
 
   final String templateId;
@@ -128,8 +159,11 @@ final class TemplateChoice {
   final int versionNumber;
   final String timezone;
   final int maxOccurrencesPerDate;
+  final String code;
+  final String name;
+  final String assetKind;
 
-  String get displayName => 'VL · Veículos leves';
+  String get displayName => '$code · $name';
 }
 
 final class IdentificationSnapshot {
@@ -164,20 +198,20 @@ final class IdentificationSnapshot {
   final String? driverLicenseExpiryDate;
 
   Map<String, Object?> toJson() => {
-        'company': company,
-        'site': site,
-        'manufactureYear': manufactureYear,
-        'predominantColor': predominantColor,
-        'assetCode': assetCode,
-        'ownershipType': ownershipType,
-        'licensePlate': licensePlate,
-        'vehicleMakeModel': vehicleMakeModel,
-        'manufacturer': manufacturer,
-        'responsiblePersonId': responsiblePersonId,
-        'responsiblePersonName': responsiblePersonName,
-        'driverLicenseNumber': driverLicenseNumber,
-        'driverLicenseExpiryDate': driverLicenseExpiryDate,
-      };
+    'company': company,
+    'site': site,
+    'manufactureYear': manufactureYear,
+    'predominantColor': predominantColor,
+    'assetCode': assetCode,
+    'ownershipType': ownershipType,
+    'licensePlate': licensePlate,
+    'vehicleMakeModel': vehicleMakeModel,
+    'manufacturer': manufacturer,
+    'responsiblePersonId': responsiblePersonId,
+    'responsiblePersonName': responsiblePersonName,
+    'driverLicenseNumber': driverLicenseNumber,
+    'driverLicenseExpiryDate': driverLicenseExpiryDate,
+  };
 
   factory IdentificationSnapshot.fromJson(Map<String, Object?> json) =>
       IdentificationSnapshot(
@@ -185,8 +219,7 @@ final class IdentificationSnapshot {
         site: json['site'] as String? ?? '',
         assetCode: json['assetCode'] as String? ?? '',
         ownershipType: json['ownershipType'] as String? ?? 'OWN',
-        responsiblePersonName:
-            json['responsiblePersonName'] as String? ?? '',
+        responsiblePersonName: json['responsiblePersonName'] as String? ?? '',
         manufactureYear: json['manufactureYear'] as int?,
         predominantColor: json['predominantColor'] as String?,
         licensePlate: json['licensePlate'] as String?,
@@ -194,8 +227,7 @@ final class IdentificationSnapshot {
         manufacturer: json['manufacturer'] as String?,
         responsiblePersonId: json['responsiblePersonId'] as String?,
         driverLicenseNumber: json['driverLicenseNumber'] as String?,
-        driverLicenseExpiryDate:
-            json['driverLicenseExpiryDate'] as String?,
+        driverLicenseExpiryDate: json['driverLicenseExpiryDate'] as String?,
       );
 }
 
@@ -230,20 +262,19 @@ final class ChecklistItem {
     InspectionResult? result,
     bool clearResult = false,
     String? observation,
-  }) =>
-      ChecklistItem(
-        id: id,
-        sectionId: sectionId,
-        sectionTitle: sectionTitle,
-        text: text,
-        order: order,
-        requiredOnComplete: requiredOnComplete,
-        requireObservationWhenNc: requireObservationWhenNc,
-        requirePhotoWhenNc: requirePhotoWhenNc,
-        sourcePrintedNumber: sourcePrintedNumber,
-        result: clearResult ? null : result ?? this.result,
-        observation: observation ?? this.observation,
-      );
+  }) => ChecklistItem(
+    id: id,
+    sectionId: sectionId,
+    sectionTitle: sectionTitle,
+    text: text,
+    order: order,
+    requiredOnComplete: requiredOnComplete,
+    requireObservationWhenNc: requireObservationWhenNc,
+    requirePhotoWhenNc: requirePhotoWhenNc,
+    sourcePrintedNumber: sourcePrintedNumber,
+    result: clearResult ? null : result ?? this.result,
+    observation: observation ?? this.observation,
+  );
 }
 
 final class InspectionDraft {
@@ -257,6 +288,9 @@ final class InspectionDraft {
     required this.identification,
     required this.items,
     required this.templateVersionNumber,
+    required this.templateDisplayName,
+    this.attachments = const [],
+    this.hasBeenSent = false,
     this.observations,
     this.revision,
     this.lastError,
@@ -272,18 +306,40 @@ final class InspectionDraft {
   final IdentificationSnapshot identification;
   final List<ChecklistItem> items;
   final int templateVersionNumber;
+  final String templateDisplayName;
+  final List<InspectionAttachment> attachments;
+  final bool hasBeenSent;
   final String? observations;
   final int? revision;
   final String? lastError;
   final String? conflictId;
 
   int get answeredCount => items.where((item) => item.result != null).length;
-  int get requiredCount => items.where((item) => item.requiredOnComplete).length;
+  int get requiredCount =>
+      items.where((item) => item.requiredOnComplete).length;
   int get requiredAnsweredCount => items
       .where((item) => item.requiredOnComplete && item.result != null)
       .length;
   bool get canComplete => requiredAnsweredCount == requiredCount;
   double get progress => items.isEmpty ? 0 : answeredCount / items.length;
+  bool get canDeleteBeforeSync =>
+      !hasBeenSent && syncState != LocalSyncState.syncing;
+}
+
+final class InspectionAttachment {
+  const InspectionAttachment({
+    required this.id,
+    required this.localPath,
+    required this.mediaType,
+    required this.syncState,
+    this.lastError,
+  });
+
+  final String id;
+  final String localPath;
+  final String mediaType;
+  final LocalSyncState syncState;
+  final String? lastError;
 }
 
 final class InspectionSummary {
@@ -315,7 +371,9 @@ final class WeeklyChecklistCard {
     required this.id,
     required this.asset,
     required this.weekStartDate,
+    required this.templateId,
     required this.templateVersionNumber,
+    required this.templateDisplayName,
     required this.syncState,
     required this.inspections,
   });
@@ -323,7 +381,9 @@ final class WeeklyChecklistCard {
   final String id;
   final AssetSummary asset;
   final DateTime weekStartDate;
+  final String templateId;
   final int templateVersionNumber;
+  final String templateDisplayName;
   final LocalSyncState syncState;
   final List<InspectionSummary> inspections;
 
@@ -331,9 +391,8 @@ final class WeeklyChecklistCard {
   int get completedCount => inspections
       .where((item) => item.lifecycle == InspectionLifecycle.completed)
       .length;
-  bool get hasPendingSync => inspections.any(
-        (item) => item.syncState != LocalSyncState.synced,
-      );
+  bool get hasPendingSync =>
+      inspections.any((item) => item.syncState != LocalSyncState.synced);
 }
 
 final class WeeklyChecklistDetail {
@@ -343,6 +402,7 @@ final class WeeklyChecklistDetail {
     required this.weekStartDate,
     required this.timezone,
     required this.templateVersionNumber,
+    required this.templateDisplayName,
     required this.inspections,
   });
 
@@ -351,6 +411,7 @@ final class WeeklyChecklistDetail {
   final DateTime weekStartDate;
   final String timezone;
   final int templateVersionNumber;
+  final String templateDisplayName;
   final List<InspectionSummary> inspections;
 
   bool contains(DateTime date) => belongsToWeek(date, weekStartDate);

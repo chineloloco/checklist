@@ -4,13 +4,14 @@ import { ChecklistService } from "@/features/checklists/application/checklist-se
 import {
   createInspectionSchema,
   openWeeklyChecklistSchema,
-  updateInspectionSchema
+  updateInspectionSchema,
 } from "@/features/checklists/domain/inspection";
-import { ZodError, type z } from "zod";
+import { ZodError, z } from "zod";
 import type { syncPushSchema } from "@/features/sync/domain/sync";
 import { getDb } from "@/infrastructure/db/client";
 import {
   assets,
+  auditEvents,
   assetTemplateAssignments,
   checklistTemplates,
   operationConfigs,
@@ -19,14 +20,20 @@ import {
   people,
   sites,
   syncChangeLog,
-  templateVersions
+  templateVersions,
 } from "@/infrastructure/db/schema";
 import { TemplateService } from "@/features/templates/application/template-service";
+import { PostgresRegistryRepository } from "@/features/registry/infrastructure/postgres-registry-repository";
+import { hasPermission } from "@/features/auth/domain/permissions";
+import { DomainError } from "@/shared/domain/errors";
+import { hashPayload } from "@/shared/infrastructure/hash";
 
 type PushInput = z.infer<typeof syncPushSchema>;
 
 export class SyncService {
-  private get database() { return getDb(); }
+  private get database() {
+    return getDb();
+  }
   private readonly checklists = new ChecklistService();
   private readonly templates = new TemplateService();
 
@@ -40,11 +47,12 @@ export class SyncService {
         and(
           eq(templateVersions.status, "PUBLISHED"),
           eq(templateVersions.organizationId, context.organizationId),
-          eq(checklistTemplates.status, "ACTIVE")
-        )
+          eq(checklistTemplates.status, "ACTIVE"),
+        ),
       );
     const templateVersionsData = [];
-    for (const version of versions) templateVersionsData.push(await this.templates.version(context, version.id));
+    for (const version of versions)
+      templateVersionsData.push(await this.templates.version(context, version.id));
     const assetRows = await this.database
       .select()
       .from(assets)
@@ -52,14 +60,28 @@ export class SyncService {
     const configRows = await this.database
       .select()
       .from(operationConfigs)
-      .where(and(eq(operationConfigs.organizationId, context.organizationId), eq(operationConfigs.active, true)));
+      .where(
+        and(
+          eq(operationConfigs.organizationId, context.organizationId),
+          eq(operationConfigs.active, true),
+        ),
+      );
     const requiredDays = await this.database.select().from(operationRequiredDays);
-    const weekdayNames = ["", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
+    const weekdayNames = [
+      "",
+      "MONDAY",
+      "TUESDAY",
+      "WEDNESDAY",
+      "THURSDAY",
+      "FRIDAY",
+      "SATURDAY",
+      "SUNDAY",
+    ];
     const configs = configRows.map((config) => ({
       ...config,
       requiredWeekdays: requiredDays
         .filter((day) => day.operationConfigId === config.id)
-        .map((day) => weekdayNames[day.weekday])
+        .map((day) => weekdayNames[day.weekday]),
     }));
     const assignments = await this.database
       .select()
@@ -67,8 +89,8 @@ export class SyncService {
       .where(
         and(
           eq(assetTemplateAssignments.organizationId, context.organizationId),
-          eq(assetTemplateAssignments.active, true)
-        )
+          eq(assetTemplateAssignments.active, true),
+        ),
       );
     const companyRows = await this.database
       .select()
@@ -87,8 +109,8 @@ export class SyncService {
         and(
           eq(people.organizationId, context.organizationId),
           eq(people.active, true),
-          ne(people.name, "Responsável pelo preenchimento")
-        )
+          ne(people.name, "Responsável pelo preenchimento"),
+        ),
       )
       .orderBy(asc(people.name));
     const [last] = await this.database
@@ -109,7 +131,7 @@ export class SyncService {
       companies: companyRows,
       sites: siteRows,
       people: peopleRows,
-      tombstones: []
+      tombstones: [],
     };
   }
 
@@ -117,23 +139,133 @@ export class SyncService {
     const results = [];
     for (const operation of input.operations) {
       try {
-        if (operation.entityType === "WEEKLY_CHECKLIST") {
-          const weekly = await this.checklists.openWeekly(context, openWeeklyChecklistSchema.parse(operation.payload));
-          results.push({ operationId: operation.operationId, status: "APPLIED", entityId: weekly.id, serverRevision: weekly.revision, problem: null });
+        if (operation.entityType === "AUDIT_EVENT") {
+          if (!hasPermission(context.roles, "inspections:write"))
+            throw new DomainError("FORBIDDEN", "Sem permissão para registrar inspeções.", 403);
+          if (operation.mutation !== "VOID" || operation.baseRevision != null)
+            throw new DomainError("VALIDATION_FAILED", "Evento de auditoria inválido.", 422);
+          const details = z
+            .object({ localDate: z.iso.date(), assetCode: z.string().max(100) })
+            .parse(operation.payload);
+          const requestHash = hashPayload({
+            entityId: operation.entityId,
+            details,
+            clientOccurredAt: operation.clientOccurredAt,
+            deviceId: input.deviceId,
+          });
+          const inserted = await this.database
+            .insert(auditEvents)
+            .values({
+              id: operation.operationId,
+              organizationId: context.organizationId,
+              entityType: "INSPECTION",
+              entityId: operation.entityId,
+              action: "LOCAL_DRAFT_DEACTIVATED",
+              actorUserId: context.userId,
+              metadata: {
+                ...details,
+                clientOccurredAt: operation.clientOccurredAt,
+                deviceId: input.deviceId,
+                source: "MOBILE",
+                requestHash,
+              },
+            })
+            .onConflictDoNothing({ target: auditEvents.id })
+            .returning({ id: auditEvents.id });
+          if (!inserted.length) {
+            const [previous] = await this.database
+              .select()
+              .from(auditEvents)
+              .where(eq(auditEvents.id, operation.operationId))
+              .limit(1);
+            if (
+              !previous ||
+              previous.organizationId !== context.organizationId ||
+              previous.actorUserId !== context.userId ||
+              previous.metadata.requestHash !== requestHash
+            ) {
+              throw new DomainError(
+                "AUDIT_OPERATION_REUSED",
+                "O identificador do evento já foi usado com outro conteúdo.",
+                409,
+              );
+            }
+          }
+          results.push({
+            operationId: operation.operationId,
+            status: inserted.length ? "APPLIED" : "ALREADY_APPLIED",
+            entityId: operation.entityId,
+            serverRevision: null,
+            problem: null,
+          });
+        } else if (
+          operation.entityType === "COMPANY" ||
+          operation.entityType === "SITE" ||
+          operation.entityType === "PERSON" ||
+          operation.entityType === "ASSET"
+        ) {
+          if (!hasPermission(context.roles, "cadastros:write"))
+            throw new DomainError("FORBIDDEN", "Sem permissão para cadastrar.", 403);
+          if (operation.mutation !== "UPSERT" || operation.baseRevision != null)
+            throw new DomainError("VALIDATION_FAILED", "Operação de cadastro inválida.", 422);
+          const kinds = {
+            COMPANY: "companies",
+            SITE: "sites",
+            PERSON: "people",
+            ASSET: "assets",
+          } as const;
+          const created = await new PostgresRegistryRepository().createFromSync(
+            context,
+            kinds[operation.entityType],
+            operation.entityId,
+            operation.payload,
+          );
+          results.push({
+            operationId: operation.operationId,
+            status: "APPLIED",
+            entityId: created.id,
+            serverRevision: created.revision,
+            problem: null,
+          });
+        } else if (operation.entityType === "WEEKLY_CHECKLIST") {
+          const weekly = await this.checklists.openWeekly(
+            context,
+            openWeeklyChecklistSchema.parse(operation.payload),
+          );
+          results.push({
+            operationId: operation.operationId,
+            status: "APPLIED",
+            entityId: weekly.id,
+            serverRevision: weekly.revision,
+            problem: null,
+          });
         } else if (operation.baseRevision == null) {
           const inspectionInput = createInspectionSchema.parse({
             ...operation.payload,
             clientInspectionId: operation.entityId,
-            deviceId: input.deviceId
+            deviceId: input.deviceId,
           });
           const weeklyChecklistId = String(operation.payload.weeklyChecklistId ?? "");
-          const outcome = await this.checklists.createInspection(context, weeklyChecklistId, operation.operationId, inspectionInput);
+          const outcome = await this.checklists.createInspection(
+            context,
+            weeklyChecklistId,
+            operation.operationId,
+            inspectionInput,
+          );
           results.push({
             operationId: operation.operationId,
-            status: outcome.statusCode === 409 ? "CONFLICT" : outcome.replayed ? "ALREADY_APPLIED" : "APPLIED",
+            status:
+              outcome.statusCode === 409
+                ? "CONFLICT"
+                : outcome.replayed
+                  ? "ALREADY_APPLIED"
+                  : "APPLIED",
             entityId: outcome.result.id,
             serverRevision: outcome.result.revision,
-            problem: outcome.statusCode === 409 ? { code: "DUPLICATE_SLOT", conflictId: outcome.result.conflictId } : null
+            problem:
+              outcome.statusCode === 409
+                ? { code: "DUPLICATE_SLOT", conflictId: outcome.result.conflictId }
+                : null,
           });
         } else if (operation.mutation === "UPSERT" || operation.mutation === "COMPLETE") {
           const inspectionInput = updateInspectionSchema.parse({
@@ -142,21 +274,19 @@ export class SyncService {
             deviceId: input.deviceId,
             baseRevision: operation.baseRevision,
             lifecycleStatus:
-              operation.mutation === "COMPLETE"
-                ? "COMPLETED"
-                : operation.payload.lifecycleStatus
+              operation.mutation === "COMPLETE" ? "COMPLETED" : operation.payload.lifecycleStatus,
           });
           const updated = await this.checklists.updateInspection(
             context,
             operation.entityId,
-            inspectionInput
+            inspectionInput,
           );
           results.push({
             operationId: operation.operationId,
             status: "APPLIED",
             entityId: updated.id,
             serverRevision: updated.revision,
-            problem: null
+            problem: null,
           });
         } else {
           throw new Error("A anulação de inspeções ainda não está disponível no aplicativo.");
@@ -173,7 +303,7 @@ export class SyncService {
           status: "REJECTED",
           entityId: operation.entityId,
           serverRevision: null,
-          problem: { code: error instanceof Error ? error.name : "ERROR", detail }
+          problem: { code: error instanceof Error ? error.name : "ERROR", detail },
         });
       }
     }
@@ -194,10 +324,20 @@ export class SyncService {
       hasMore: changesAfter.length > limit,
       changes: page
         .filter((row) => row.changeType !== "ARCHIVE" && row.changeType !== "DELETE")
-        .map((row) => ({ entityType: row.entityType, entityId: row.entityId, revision: row.revision, payload: row.payload })),
+        .map((row) => ({
+          entityType: row.entityType,
+          entityId: row.entityId,
+          revision: row.revision,
+          payload: row.payload,
+        })),
       tombstones: page
         .filter((row) => row.changeType === "ARCHIVE" || row.changeType === "DELETE")
-        .map((row) => ({ entityType: row.entityType, entityId: row.entityId, deletedAt: row.changedAt.toISOString(), changeType: row.changeType }))
+        .map((row) => ({
+          entityType: row.entityType,
+          entityId: row.entityId,
+          deletedAt: row.changedAt.toISOString(),
+          changeType: row.changeType,
+        })),
     };
   }
 }

@@ -1,12 +1,15 @@
 import { z } from "zod";
 
+export const registryKindSchema = z.enum(["companies", "sites", "people", "assets"]);
+export type RegistryKind = z.infer<typeof registryKindSchema>;
+
 export const createCompanySchema = z.object({
   name: z.string().trim().min(1).max(200),
-  document: z.string().trim().max(30).nullable().optional()
+  document: z.string().trim().max(30).nullable().optional(),
 });
 export const createSiteSchema = z.object({
-  companyId: z.uuid(),
-  name: z.string().trim().min(1).max(200)
+  companyId: z.uuid().nullable().optional(),
+  name: z.string().trim().min(1).max(200),
 });
 export const createPersonSchema = z.object({
   name: z.string().trim().min(1).max(200),
@@ -14,7 +17,7 @@ export const createPersonSchema = z.object({
   driverLicenseNumber: z.string().max(30).nullable().optional(),
   driverLicenseExpiryDate: z.iso.date().nullable().optional(),
   moppExpiryDate: z.iso.date().nullable().optional(),
-  passengerCourseExpiryDate: z.iso.date().nullable().optional()
+  passengerCourseExpiryDate: z.iso.date().nullable().optional(),
 });
 export const createAssetSchema = z
   .object({
@@ -27,17 +30,18 @@ export const createAssetSchema = z
     manufacturer: z.string().trim().max(200).nullable().optional(),
     manufactureYear: z.number().int().min(1900).max(2200).nullable().optional(),
     predominantColor: z.string().trim().max(80).nullable().optional(),
-    ownershipType: z.enum(["OWN", "THIRD_PARTY"])
+    ownershipType: z.enum(["OWN", "THIRD_PARTY"]),
   })
   .superRefine((value, ctx) => {
     if (value.kind === "VEHICLE" && !value.makeModel) {
-      ctx.addIssue({ code: "custom", path: ["makeModel"], message: "Informe marca e modelo do veículo." });
-    }
-    if (value.kind === "EQUIPMENT" && !value.manufacturer) {
-      ctx.addIssue({ code: "custom", path: ["manufacturer"], message: "Informe o fabricante do equipamento." });
+      ctx.addIssue({
+        code: "custom",
+        path: ["makeModel"],
+        message: "Informe marca e modelo do veículo.",
+      });
     }
   });
 export const assignTemplateSchema = z.object({
   templateId: z.uuid(),
-  operationConfigId: z.uuid()
+  operationConfigId: z.uuid(),
 });

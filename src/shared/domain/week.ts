@@ -42,6 +42,6 @@ export function todayInTimeZone(timeZone: string, now = new Date()): string {
     timeZone,
     year: "numeric",
     month: "2-digit",
-    day: "2-digit"
+    day: "2-digit",
   }).format(now);
 }

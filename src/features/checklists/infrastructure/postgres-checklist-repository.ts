@@ -21,7 +21,8 @@ import {
   templateItems,
   templateSections,
   templateVersions,
-  weeklyChecklists
+  weeklyChecklists,
+  users,
 } from "@/infrastructure/db/schema";
 import { conflict, notFound, validationFailed } from "@/shared/domain/errors";
 import { addDays, isDateInWeek, mondayOf } from "@/shared/domain/week";
@@ -30,7 +31,7 @@ import type {
   CreateInspectionInput,
   InspectionResult,
   OpenWeeklyChecklistInput,
-  UpdateInspectionInput
+  UpdateInspectionInput,
 } from "@/features/checklists/domain/inspection";
 import { inspectionAttachmentSchema } from "@/features/checklists/domain/inspection";
 
@@ -49,7 +50,9 @@ function resultFromBody(body: Record<string, unknown>): InspectionResult {
 }
 
 export class PostgresChecklistRepository {
-  private get database() { return getDb(); }
+  private get database() {
+    return getDb();
+  }
 
   async openWeekly(context: RequestContext, input: OpenWeeklyChecklistInput) {
     return this.database.transaction(async (tx) => {
@@ -59,36 +62,53 @@ export class PostgresChecklistRepository {
           templateId: checklistTemplates.id,
           versionId: templateVersions.id,
           operationConfigId: operationConfigs.id,
-          timezone: operationConfigs.timezone
+          timezone: operationConfigs.timezone,
         })
         .from(assets)
-        .innerJoin(
+        .leftJoin(
           assetTemplateAssignments,
-          and(eq(assetTemplateAssignments.assetId, assets.id), eq(assetTemplateAssignments.active, true))
+          and(
+            eq(assetTemplateAssignments.assetId, assets.id),
+            eq(assetTemplateAssignments.active, true),
+          ),
         )
         .innerJoin(
           checklistTemplates,
           and(
-            eq(checklistTemplates.id, assetTemplateAssignments.templateId),
+            input.operationConfigId
+              ? eq(checklistTemplates.id, input.templateId)
+              : eq(checklistTemplates.id, assetTemplateAssignments.templateId),
+            eq(checklistTemplates.assetKind, assets.kind),
             eq(checklistTemplates.organizationId, context.organizationId),
-            eq(checklistTemplates.status, "ACTIVE")
-          )
+            eq(checklistTemplates.status, "ACTIVE"),
+          ),
         )
         .innerJoin(
           templateVersions,
-          and(eq(templateVersions.templateId, checklistTemplates.id), eq(templateVersions.status, "PUBLISHED"))
+          and(
+            eq(templateVersions.templateId, checklistTemplates.id),
+            eq(templateVersions.status, "PUBLISHED"),
+            input.templateVersionId ? eq(templateVersions.id, input.templateVersionId) : undefined,
+          ),
         )
         .innerJoin(
           operationConfigs,
-          and(eq(operationConfigs.id, assetTemplateAssignments.operationConfigId), eq(operationConfigs.active, true))
+          and(
+            input.operationConfigId
+              ? eq(operationConfigs.id, input.operationConfigId)
+              : eq(operationConfigs.id, assetTemplateAssignments.operationConfigId),
+            eq(operationConfigs.templateId, checklistTemplates.id),
+            eq(operationConfigs.organizationId, context.organizationId),
+            eq(operationConfigs.active, true),
+          ),
         )
         .where(
           and(
             eq(assets.id, input.assetId),
             eq(assets.organizationId, context.organizationId),
             eq(checklistTemplates.id, input.templateId),
-            eq(assets.active, true)
-          )
+            eq(assets.active, true),
+          ),
         )
         .orderBy(desc(templateVersions.versionNumber))
         .limit(1);
@@ -100,7 +120,7 @@ export class PostgresChecklistRepository {
       const weekStartDate = mondayOf(input.localDate);
       const checklistId = input.clientWeeklyChecklistId ?? randomUUID();
       await tx.execute(
-        sql`select pg_advisory_xact_lock(hashtext(${`weekly:${context.organizationId}:${input.assetId}:${input.templateId}:${weekStartDate}`}))`
+        sql`select pg_advisory_xact_lock(hashtext(${`weekly:${context.organizationId}:${input.assetId}:${input.templateId}:${weekStartDate}`}))`,
       );
 
       const [existing] = await tx
@@ -111,11 +131,19 @@ export class PostgresChecklistRepository {
             eq(weeklyChecklists.organizationId, context.organizationId),
             eq(weeklyChecklists.assetId, input.assetId),
             eq(weeklyChecklists.templateId, input.templateId),
-            eq(weeklyChecklists.weekStartDate, weekStartDate)
-          )
+            eq(weeklyChecklists.weekStartDate, weekStartDate),
+          ),
         )
         .limit(1);
-      if (existing) return existing;
+      if (existing) {
+        if (input.templateVersionId && existing.templateVersionId !== input.templateVersionId) {
+          throw conflict(
+            "TEMPLATE_VERSION_CONFLICT",
+            "Esta semana já usa outra versão do modelo. As respostas locais foram preservadas.",
+          );
+        }
+        return existing;
+      }
 
       const [created] = await tx
         .insert(weeklyChecklists)
@@ -128,7 +156,7 @@ export class PostgresChecklistRepository {
           operationConfigId: configuration.operationConfigId,
           weekStartDate,
           timezone: configuration.timezone,
-          createdBy: context.userId
+          createdBy: context.userId,
         })
         .returning();
 
@@ -138,7 +166,7 @@ export class PostgresChecklistRepository {
         entityId: created.id,
         action: "CREATED",
         actorUserId: context.userId,
-        metadata: { templateVersionId: created.templateVersionId, weekStartDate }
+        metadata: { templateVersionId: created.templateVersionId, weekStartDate },
       });
       await tx.insert(syncChangeLog).values({
         organizationId: context.organizationId,
@@ -146,7 +174,7 @@ export class PostgresChecklistRepository {
         entityId: created.id,
         revision: created.revision,
         changeType: "UPSERT",
-        payload: created
+        payload: created,
       });
       return created;
     });
@@ -156,11 +184,13 @@ export class PostgresChecklistRepository {
     context: RequestContext,
     weeklyChecklistId: string,
     operationId: string,
-    input: CreateInspectionInput
+    input: CreateInspectionInput,
   ): Promise<{ statusCode: number; result: InspectionResult; replayed: boolean }> {
     const requestHash = hashPayload({ weeklyChecklistId, input });
     return this.database.transaction(async (tx) => {
-      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`operation:${context.organizationId}:${input.deviceId}:${operationId}`}))`);
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${`operation:${context.organizationId}:${input.deviceId}:${operationId}`}))`,
+      );
       const [receipt] = await tx
         .select()
         .from(idempotencyReceipts)
@@ -168,15 +198,22 @@ export class PostgresChecklistRepository {
           and(
             eq(idempotencyReceipts.organizationId, context.organizationId),
             eq(idempotencyReceipts.deviceId, input.deviceId),
-            eq(idempotencyReceipts.operationId, operationId)
-          )
+            eq(idempotencyReceipts.operationId, operationId),
+          ),
         )
         .limit(1);
       if (receipt) {
         if (receipt.requestHash !== requestHash) {
-          throw conflict("IDEMPOTENCY_KEY_REUSED", "A chave de idempotência já foi usada com outro conteúdo.");
+          throw conflict(
+            "IDEMPOTENCY_KEY_REUSED",
+            "A chave de idempotência já foi usada com outro conteúdo.",
+          );
         }
-        return { statusCode: receipt.statusCode, result: resultFromBody(receipt.responseBody), replayed: true };
+        return {
+          statusCode: receipt.statusCode,
+          result: resultFromBody(receipt.responseBody),
+          replayed: true,
+        };
       }
 
       const [weekly] = await tx
@@ -185,11 +222,16 @@ export class PostgresChecklistRepository {
           weekStartDate: weeklyChecklists.weekStartDate,
           templateVersionId: weeklyChecklists.templateVersionId,
           operationConfigId: weeklyChecklists.operationConfigId,
-          maxOccurrences: operationConfigs.maxOccurrencesPerDate
+          maxOccurrences: operationConfigs.maxOccurrencesPerDate,
         })
         .from(weeklyChecklists)
         .innerJoin(operationConfigs, eq(operationConfigs.id, weeklyChecklists.operationConfigId))
-        .where(and(eq(weeklyChecklists.id, weeklyChecklistId), eq(weeklyChecklists.organizationId, context.organizationId)))
+        .where(
+          and(
+            eq(weeklyChecklists.id, weeklyChecklistId),
+            eq(weeklyChecklists.organizationId, context.organizationId),
+          ),
+        )
         .limit(1);
       if (!weekly) throw notFound("Checklist semanal não encontrado.");
       if (!isDateInWeek(input.localDate, weekly.weekStartDate)) {
@@ -203,7 +245,7 @@ export class PostgresChecklistRepository {
         .select({
           id: templateItems.id,
           required: templateItems.requiredOnComplete,
-          requireObservationWhenNc: templateItems.requireObservationWhenNc
+          requireObservationWhenNc: templateItems.requireObservationWhenNc,
         })
         .from(templateItems)
         .where(eq(templateItems.versionId, weekly.templateVersionId));
@@ -215,11 +257,15 @@ export class PostgresChecklistRepository {
           weeklyChecklistId,
           localDate: input.localDate,
           occurrenceNo: input.occurrenceNo,
-          expected: false
+          expected: false,
         })
         .onConflictDoUpdate({
-          target: [inspectionSlots.weeklyChecklistId, inspectionSlots.localDate, inspectionSlots.occurrenceNo],
-          set: { localDate: input.localDate }
+          target: [
+            inspectionSlots.weeklyChecklistId,
+            inspectionSlots.localDate,
+            inspectionSlots.occurrenceNo,
+          ],
+          set: { localDate: input.localDate },
         })
         .returning();
 
@@ -234,20 +280,23 @@ export class PostgresChecklistRepository {
           revision: inspections.currentRevision,
           creationHash: inspections.creationHash,
           localDate: inspectionSlots.localDate,
-          occurrenceNo: inspectionSlots.occurrenceNo
+          occurrenceNo: inspectionSlots.occurrenceNo,
         })
         .from(inspections)
         .innerJoin(inspectionSlots, eq(inspectionSlots.id, inspections.slotId))
         .where(
           and(
             eq(inspections.organizationId, context.organizationId),
-            eq(inspections.clientInspectionId, input.clientInspectionId)
-          )
+            eq(inspections.clientInspectionId, input.clientInspectionId),
+          ),
         )
         .limit(1);
       if (sameClient) {
         if (sameClient.creationHash !== requestHash) {
-          throw conflict("CLIENT_INSPECTION_ID_REUSED", "O identificador da inspeção já existe com outro conteúdo.");
+          throw conflict(
+            "CLIENT_INSPECTION_ID_REUSED",
+            "O identificador da inspeção já existe com outro conteúdo.",
+          );
         }
         const result: InspectionResult = {
           id: sameClient.id,
@@ -256,9 +305,17 @@ export class PostgresChecklistRepository {
           localDate: sameClient.localDate,
           occurrenceNo: sameClient.occurrenceNo,
           lifecycleStatus: sameClient.lifecycleStatus,
-          revision: sameClient.revision
+          revision: sameClient.revision,
         };
-        await this.saveReceipt(tx, context.organizationId, input.deviceId, operationId, requestHash, 200, result);
+        await this.saveReceipt(
+          tx,
+          context.organizationId,
+          input.deviceId,
+          operationId,
+          requestHash,
+          200,
+          result,
+        );
         return { statusCode: 200, result, replayed: true };
       }
 
@@ -284,7 +341,7 @@ export class PostgresChecklistRepository {
           isConflictCandidate: isConflict,
           responsiblePersonId: input.identification.responsiblePersonId,
           createdBy: context.userId,
-          completedAt: input.lifecycleStatus === "COMPLETED" ? new Date() : null
+          completedAt: input.lifecycleStatus === "COMPLETED" ? new Date() : null,
         })
         .returning();
 
@@ -297,7 +354,7 @@ export class PostgresChecklistRepository {
           identificationSnapshot: input.identification,
           observations: input.observations,
           changes: input.attachments,
-          authoredBy: context.userId
+          authoredBy: context.userId,
         })
         .returning();
       if (input.responses.length) {
@@ -306,8 +363,8 @@ export class PostgresChecklistRepository {
             inspectionRevisionId: revision.id,
             templateItemId: response.itemId,
             result: response.result,
-            observation: response.observation
-          }))
+            observation: response.observation,
+          })),
         );
       }
 
@@ -320,7 +377,7 @@ export class PostgresChecklistRepository {
         conflictId = conflictCase.id;
         await tx.insert(conflictMembers).values([
           { conflictId, inspectionId: existing.id, role: "EXISTING" },
-          { conflictId, inspectionId: created.id, role: "CANDIDATE" }
+          { conflictId, inspectionId: created.id, role: "CANDIDATE" },
         ]);
       }
 
@@ -333,7 +390,7 @@ export class PostgresChecklistRepository {
         lifecycleStatus: created.lifecycleStatus,
         revision: created.currentRevision,
         conflict: isConflict,
-        conflictId
+        conflictId,
       };
       const statusCode = isConflict ? 409 : 201;
 
@@ -343,7 +400,7 @@ export class PostgresChecklistRepository {
         entityId: created.id,
         action: isConflict ? "CREATED_AS_CONFLICT_CANDIDATE" : "CREATED",
         actorUserId: context.userId,
-        metadata: { localDate: input.localDate, occurrenceNo: input.occurrenceNo, conflictId }
+        metadata: { localDate: input.localDate, occurrenceNo: input.occurrenceNo, conflictId },
       });
       await tx.insert(syncChangeLog).values({
         organizationId: context.organizationId,
@@ -351,9 +408,17 @@ export class PostgresChecklistRepository {
         entityId: created.id,
         revision: 1,
         changeType: "UPSERT",
-        payload: result
+        payload: result,
       });
-      await this.saveReceipt(tx, context.organizationId, input.deviceId, operationId, requestHash, statusCode, result);
+      await this.saveReceipt(
+        tx,
+        context.organizationId,
+        input.deviceId,
+        operationId,
+        requestHash,
+        statusCode,
+        result,
+      );
       return { statusCode, result, replayed: false };
     });
   }
@@ -361,13 +426,13 @@ export class PostgresChecklistRepository {
   async updateInspection(
     context: RequestContext,
     inspectionId: string,
-    input: UpdateInspectionInput
+    input: UpdateInspectionInput,
   ): Promise<InspectionResult> {
     const requestHash = hashPayload({ inspectionId, input });
     return this.database.transaction(async (tx) => {
       if (input.operationId && input.deviceId) {
         await tx.execute(
-          sql`select pg_advisory_xact_lock(hashtext(${`operation:${context.organizationId}:${input.deviceId}:${input.operationId}`}))`
+          sql`select pg_advisory_xact_lock(hashtext(${`operation:${context.organizationId}:${input.deviceId}:${input.operationId}`}))`,
         );
         const [receipt] = await tx
           .select()
@@ -376,52 +441,64 @@ export class PostgresChecklistRepository {
             and(
               eq(idempotencyReceipts.organizationId, context.organizationId),
               eq(idempotencyReceipts.deviceId, input.deviceId),
-              eq(idempotencyReceipts.operationId, input.operationId)
-            )
+              eq(idempotencyReceipts.operationId, input.operationId),
+            ),
           )
           .limit(1);
         if (receipt) {
           if (receipt.requestHash !== requestHash) {
             throw conflict(
               "IDEMPOTENCY_KEY_REUSED",
-              "A chave de idempotência já foi usada com outro conteúdo."
+              "A chave de idempotência já foi usada com outro conteúdo.",
             );
           }
           return resultFromBody(receipt.responseBody);
         }
       }
-      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`inspection:${inspectionId}`}))`);
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${`inspection:${inspectionId}`}))`,
+      );
       const [current] = await tx
         .select({
           inspection: inspections,
           localDate: inspectionSlots.localDate,
           occurrenceNo: inspectionSlots.occurrenceNo,
-          versionId: weeklyChecklists.templateVersionId
+          versionId: weeklyChecklists.templateVersionId,
         })
         .from(inspections)
         .innerJoin(inspectionSlots, eq(inspectionSlots.id, inspections.slotId))
         .innerJoin(weeklyChecklists, eq(weeklyChecklists.id, inspections.weeklyChecklistId))
-        .where(and(eq(inspections.id, inspectionId), eq(inspections.organizationId, context.organizationId)))
+        .where(
+          and(
+            eq(inspections.id, inspectionId),
+            eq(inspections.organizationId, context.organizationId),
+          ),
+        )
         .limit(1);
       if (!current) throw notFound("Inspeção não encontrada.");
       if (current.inspection.currentRevision !== input.baseRevision) {
         throw conflict("REVISION_CONFLICT", "A inspeção foi alterada em outro lugar.", {
-          currentRevision: current.inspection.currentRevision
+          currentRevision: current.inspection.currentRevision,
         });
       }
       if (current.inspection.lifecycleStatus !== "DRAFT" && !input.correctionReason) {
-        throw conflict("INSPECTION_IMMUTABLE", "Uma inspeção concluída só pode ser alterada por correção auditada.");
+        throw conflict(
+          "INSPECTION_IMMUTABLE",
+          "Uma inspeção concluída só pode ser alterada por correção auditada.",
+        );
       }
 
       const allowedItems = await tx
         .select({
           id: templateItems.id,
           required: templateItems.requiredOnComplete,
-          requireObservationWhenNc: templateItems.requireObservationWhenNc
+          requireObservationWhenNc: templateItems.requireObservationWhenNc,
         })
         .from(templateItems)
         .where(eq(templateItems.versionId, current.versionId));
-      const nextStatus = input.correctionReason ? "CORRECTED" : (input.lifecycleStatus ?? current.inspection.lifecycleStatus);
+      const nextStatus = input.correctionReason
+        ? "CORRECTED"
+        : (input.lifecycleStatus ?? current.inspection.lifecycleStatus);
       this.validateResponses(nextStatus, input.responses, allowedItems);
       const nextRevision = current.inspection.currentRevision + 1;
 
@@ -435,7 +512,7 @@ export class PostgresChecklistRepository {
           observations: input.observations,
           correctionReason: input.correctionReason,
           changes: input.attachments,
-          authoredBy: context.userId
+          authoredBy: context.userId,
         })
         .returning();
       if (input.responses.length) {
@@ -444,8 +521,8 @@ export class PostgresChecklistRepository {
             inspectionRevisionId: revision.id,
             templateItemId: response.itemId,
             result: response.result,
-            observation: response.observation
-          }))
+            observation: response.observation,
+          })),
         );
       }
       const [updated] = await tx
@@ -453,8 +530,11 @@ export class PostgresChecklistRepository {
         .set({
           currentRevision: nextRevision,
           lifecycleStatus: nextStatus,
-          completedAt: nextStatus === "COMPLETED" || nextStatus === "CORRECTED" ? new Date() : current.inspection.completedAt,
-          updatedAt: new Date()
+          completedAt:
+            nextStatus === "COMPLETED" || nextStatus === "CORRECTED"
+              ? new Date()
+              : current.inspection.completedAt,
+          updatedAt: new Date(),
         })
         .where(eq(inspections.id, inspectionId))
         .returning();
@@ -463,10 +543,14 @@ export class PostgresChecklistRepository {
         organizationId: context.organizationId,
         entityType: "INSPECTION",
         entityId: inspectionId,
-        action: input.correctionReason ? "CORRECTED" : nextStatus === "COMPLETED" ? "COMPLETED" : "DRAFT_SAVED",
+        action: input.correctionReason
+          ? "CORRECTED"
+          : nextStatus === "COMPLETED"
+            ? "COMPLETED"
+            : "DRAFT_SAVED",
         actorUserId: context.userId,
         reason: input.correctionReason,
-        metadata: { previousRevision: input.baseRevision, revision: nextRevision }
+        metadata: { previousRevision: input.baseRevision, revision: nextRevision },
       });
       const result: InspectionResult = {
         id: updated.id,
@@ -475,7 +559,7 @@ export class PostgresChecklistRepository {
         localDate: current.localDate,
         occurrenceNo: current.occurrenceNo,
         lifecycleStatus: updated.lifecycleStatus,
-        revision: updated.currentRevision
+        revision: updated.currentRevision,
       };
       await tx.insert(syncChangeLog).values({
         organizationId: context.organizationId,
@@ -483,7 +567,7 @@ export class PostgresChecklistRepository {
         entityId: updated.id,
         revision: updated.currentRevision,
         changeType: "UPSERT",
-        payload: result
+        payload: result,
       });
       if (input.operationId && input.deviceId) {
         await this.saveReceipt(
@@ -493,7 +577,7 @@ export class PostgresChecklistRepository {
           input.operationId,
           requestHash,
           200,
-          result
+          result,
         );
       }
       return result;
@@ -511,7 +595,7 @@ export class PostgresChecklistRepository {
         observations: inspectionRevisions.observations,
         attachments: inspectionRevisions.changes,
         correctionReason: inspectionRevisions.correctionReason,
-        authoredAt: inspectionRevisions.authoredAt
+        authoredAt: inspectionRevisions.authoredAt,
       })
       .from(inspections)
       .innerJoin(inspectionSlots, eq(inspectionSlots.id, inspections.slotId))
@@ -519,14 +603,23 @@ export class PostgresChecklistRepository {
         inspectionRevisions,
         and(
           eq(inspectionRevisions.inspectionId, inspections.id),
-          eq(inspectionRevisions.revisionNumber, inspections.currentRevision)
-        )
+          eq(inspectionRevisions.revisionNumber, inspections.currentRevision),
+        ),
       )
-      .where(and(eq(inspections.id, inspectionId), eq(inspections.organizationId, context.organizationId)))
+      .where(
+        and(
+          eq(inspections.id, inspectionId),
+          eq(inspections.organizationId, context.organizationId),
+        ),
+      )
       .limit(1);
     if (!current) throw notFound("Inspeção não encontrada.");
     const answerRows = await this.database
-      .select({ itemId: responses.templateItemId, result: responses.result, observation: responses.observation })
+      .select({
+        itemId: responses.templateItemId,
+        result: responses.result,
+        observation: responses.observation,
+      })
       .from(responses)
       .where(eq(responses.inspectionRevisionId, current.revisionId));
     const history = await this.database
@@ -534,9 +627,12 @@ export class PostgresChecklistRepository {
         revision: inspectionRevisions.revisionNumber,
         status: inspectionRevisions.lifecycleStatus,
         reason: inspectionRevisions.correctionReason,
-        authoredAt: inspectionRevisions.authoredAt
+        authoredBy: inspectionRevisions.authoredBy,
+        authoredDisplayName: sql<string>`coalesce(${inspectionRevisions.authoredDisplayName}, ${users.displayName}, 'Autor não disponível')`,
+        authoredAt: inspectionRevisions.authoredAt,
       })
       .from(inspectionRevisions)
+      .leftJoin(users, eq(users.id, inspectionRevisions.authoredBy))
       .where(eq(inspectionRevisions.inspectionId, inspectionId))
       .orderBy(desc(inspectionRevisions.revisionNumber));
     return {
@@ -552,7 +648,7 @@ export class PostgresChecklistRepository {
       attachments: current.attachments,
       correctionReason: current.correctionReason,
       responses: answerRows,
-      history
+      history,
     };
   }
 
@@ -567,19 +663,28 @@ export class PostgresChecklistRepository {
         assetCode: assets.code,
         templateName: checklistTemplates.name,
         siteName: sites.name,
-        companyName: companies.name
+        companyName: companies.name,
       })
       .from(weeklyChecklists)
       .innerJoin(assets, eq(assets.id, weeklyChecklists.assetId))
       .innerJoin(checklistTemplates, eq(checklistTemplates.id, weeklyChecklists.templateId))
       .leftJoin(sites, eq(sites.id, assets.siteId))
       .innerJoin(companies, eq(companies.id, assets.companyId))
-      .where(and(eq(weeklyChecklists.id, weeklyChecklistId), eq(weeklyChecklists.organizationId, context.organizationId)))
+      .where(
+        and(
+          eq(weeklyChecklists.id, weeklyChecklistId),
+          eq(weeklyChecklists.organizationId, context.organizationId),
+        ),
+      )
       .limit(1);
     if (!weekly) throw notFound("Checklist semanal não encontrado.");
 
     const sectionRows = await this.database
-      .select({ id: templateSections.id, title: templateSections.title, order: templateSections.sortOrder })
+      .select({
+        id: templateSections.id,
+        title: templateSections.title,
+        order: templateSections.sortOrder,
+      })
       .from(templateSections)
       .where(eq(templateSections.versionId, weekly.versionId))
       .orderBy(asc(templateSections.sortOrder));
@@ -589,7 +694,7 @@ export class PostgresChecklistRepository {
         sectionId: templateItems.sectionId,
         sourcePrintedNumber: templateItems.sourcePrintedNumber,
         text: templateItems.originalText,
-        order: templateItems.sortOrder
+        order: templateItems.sortOrder,
       })
       .from(templateItems)
       .where(eq(templateItems.versionId, weekly.versionId))
@@ -605,7 +710,7 @@ export class PostgresChecklistRepository {
         revisionId: inspectionRevisions.id,
         identification: inspectionRevisions.identificationSnapshot,
         observations: inspectionRevisions.observations,
-        attachments: inspectionRevisions.changes
+        attachments: inspectionRevisions.changes,
       })
       .from(inspections)
       .innerJoin(inspectionSlots, eq(inspectionSlots.id, inspections.slotId))
@@ -613,8 +718,8 @@ export class PostgresChecklistRepository {
         inspectionRevisions,
         and(
           eq(inspectionRevisions.inspectionId, inspections.id),
-          eq(inspectionRevisions.revisionNumber, inspections.currentRevision)
-        )
+          eq(inspectionRevisions.revisionNumber, inspections.currentRevision),
+        ),
       )
       .where(eq(inspections.weeklyChecklistId, weeklyChecklistId))
       .orderBy(asc(inspectionSlots.localDate), asc(inspectionSlots.occurrenceNo));
@@ -625,7 +730,7 @@ export class PostgresChecklistRepository {
             revisionId: responses.inspectionRevisionId,
             itemId: responses.templateItemId,
             result: responses.result,
-            observation: responses.observation
+            observation: responses.observation,
           })
           .from(responses)
           .where(inArray(responses.inspectionRevisionId, revisionIds))
@@ -642,7 +747,7 @@ export class PostgresChecklistRepository {
       cells.push({
         inspectionId,
         result: answer.result,
-        observation: answer.observation
+        observation: answer.observation,
       });
       cellsByItem.set(answer.itemId, cells);
     }
@@ -661,9 +766,9 @@ export class PostgresChecklistRepository {
             inspection.localDate === localDate &&
             inspection.occurrenceNo === index + 1 &&
             inspection.lifecycleStatus !== "VOIDED" &&
-            !inspection.conflict
+            !inspection.conflict,
         ),
-        uncertainty: "A ausência no servidor pode representar uma inspeção ainda offline."
+        uncertainty: "A ausência no servidor pode representar uma inspeção ainda offline.",
       }));
     });
 
@@ -671,7 +776,12 @@ export class PostgresChecklistRepository {
       weeklyChecklistId: weekly.id,
       weekStartDate: weekly.weekStartDate,
       timezone: weekly.timezone,
-      asset: { code: weekly.assetCode, templateName: weekly.templateName, site: weekly.siteName, company: weekly.companyName },
+      asset: {
+        code: weekly.assetCode,
+        templateName: weekly.templateName,
+        site: weekly.siteName,
+        company: weekly.companyName,
+      },
       columns: inspectionRows.map((row) => ({
         id: row.id,
         localDate: row.localDate,
@@ -684,12 +794,18 @@ export class PostgresChecklistRepository {
         attachments: row.attachments.flatMap((attachment) => {
           const parsed = inspectionAttachmentSchema.safeParse(attachment);
           return parsed.success
-            ? [{ id: parsed.data.id, mediaType: parsed.data.mediaType, fileName: parsed.data.fileName }]
+            ? [
+                {
+                  id: parsed.data.id,
+                  mediaType: parsed.data.mediaType,
+                  fileName: parsed.data.fileName,
+                },
+              ]
             : [];
         }),
         required: requiredSlots.some(
-          (slot) => slot.localDate === row.localDate && slot.occurrenceNo === row.occurrenceNo
-        )
+          (slot) => slot.localDate === row.localDate && slot.occurrenceNo === row.occurrenceNo,
+        ),
       })),
       sections: sectionRows.map((section) => ({
         sectionId: section.id,
@@ -700,61 +816,86 @@ export class PostgresChecklistRepository {
             itemId: item.id,
             sourcePrintedNumber: item.sourcePrintedNumber,
             text: item.text,
-            cells: cellsByItem.get(item.id) ?? []
-          }))
+            cells: cellsByItem.get(item.id) ?? [],
+          })),
       })),
-      requiredSlots
+      requiredSlots,
     };
   }
 
-  async listWeekly(context: RequestContext, filters: { weekStartDate?: string; assetId?: string; templateId?: string }) {
+  async listWeekly(
+    context: RequestContext,
+    filters: { weekStartDate?: string; assetId?: string; templateId?: string },
+  ) {
     const conditions = [eq(weeklyChecklists.organizationId, context.organizationId)];
-    if (filters.weekStartDate) conditions.push(eq(weeklyChecklists.weekStartDate, filters.weekStartDate));
+    if (filters.weekStartDate)
+      conditions.push(eq(weeklyChecklists.weekStartDate, filters.weekStartDate));
     if (filters.assetId) conditions.push(eq(weeklyChecklists.assetId, filters.assetId));
     if (filters.templateId) conditions.push(eq(weeklyChecklists.templateId, filters.templateId));
     return this.database
       .select({
         id: weeklyChecklists.id,
         weekStartDate: weeklyChecklists.weekStartDate,
+        createdAt: weeklyChecklists.createdAt,
         timezone: weeklyChecklists.timezone,
         versionId: weeklyChecklists.templateVersionId,
         revision: weeklyChecklists.revision,
         assetId: assets.id,
         assetCode: assets.code,
+        vehicleMakeModel: assets.makeModel,
         templateId: checklistTemplates.id,
         templateName: checklistTemplates.name,
-        siteName: sites.name
+        siteName: sites.name,
       })
       .from(weeklyChecklists)
       .innerJoin(assets, eq(assets.id, weeklyChecklists.assetId))
       .innerJoin(checklistTemplates, eq(checklistTemplates.id, weeklyChecklists.templateId))
       .leftJoin(sites, eq(sites.id, assets.siteId))
       .where(and(...conditions))
-      .orderBy(desc(weeklyChecklists.weekStartDate), asc(assets.code));
+      .orderBy(desc(weeklyChecklists.createdAt), asc(assets.code), asc(weeklyChecklists.id));
   }
 
   private validateResponses(
     lifecycleStatus: string,
-    submitted: Array<{ itemId: string; result: "C" | "NC" | "NA" | null; observation?: string | null }>,
-    allowedItems: Array<{ id: string; required: boolean; requireObservationWhenNc: boolean }>
+    submitted: Array<{
+      itemId: string;
+      result: "C" | "NC" | "NA" | null;
+      observation?: string | null;
+    }>,
+    allowedItems: Array<{ id: string; required: boolean; requireObservationWhenNc: boolean }>,
   ) {
     const allowed = new Map(allowedItems.map((item) => [item.id, item]));
     const seen = new Set<string>();
     for (const response of submitted) {
       const item = allowed.get(response.itemId);
       if (!item) throw validationFailed("Uma resposta aponta para item de outra versão do modelo.");
-      if (seen.has(response.itemId)) throw validationFailed("O mesmo item foi enviado mais de uma vez.");
+      if (seen.has(response.itemId))
+        throw validationFailed("O mesmo item foi enviado mais de uma vez.");
       seen.add(response.itemId);
-      if (response.result === "NC" && item.requireObservationWhenNc && !response.observation?.trim()) {
+      if (
+        response.result === "NC" &&
+        item.requireObservationWhenNc &&
+        !response.observation?.trim()
+      ) {
         throw validationFailed("O item NC exige observação conforme a versão publicada.");
       }
     }
     if (lifecycleStatus === "COMPLETED" || lifecycleStatus === "CORRECTED") {
-      const missing = allowedItems.filter((item) => item.required && !submitted.some((answer) => answer.itemId === item.id && answer.result));
+      const missing = allowedItems.filter(
+        (item) =>
+          item.required && !submitted.some((answer) => answer.itemId === item.id && answer.result),
+      );
       if (missing.length) {
-        throw validationFailed("Todos os itens obrigatórios devem ter C, NC ou NA antes da conclusão.", [
-          ...missing.slice(0, 20).map((item) => ({ pointer: `/responses/${item.id}`, code: "REQUIRED", message: "Resposta obrigatória." }))
-        ]);
+        throw validationFailed(
+          "Todos os itens obrigatórios devem ter C, NC ou NA antes da conclusão.",
+          [
+            ...missing.slice(0, 20).map((item) => ({
+              pointer: `/responses/${item.id}`,
+              code: "REQUIRED",
+              message: "Resposta obrigatória.",
+            })),
+          ],
+        );
       }
     }
   }
@@ -766,7 +907,7 @@ export class PostgresChecklistRepository {
     operationId: string,
     requestHash: string,
     statusCode: number,
-    responseBody: Record<string, unknown>
+    responseBody: Record<string, unknown>,
   ): Promise<StoredOperation> {
     await tx.insert(idempotencyReceipts).values({
       organizationId,
@@ -774,7 +915,7 @@ export class PostgresChecklistRepository {
       operationId,
       requestHash,
       statusCode,
-      responseBody
+      responseBody,
     });
     return { statusCode, responseBody };
   }

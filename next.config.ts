@@ -5,8 +5,8 @@ const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
   experimental: {
-    typedEnv: true
-  }
+    typedEnv: true,
+  },
 };
 
 export default nextConfig;

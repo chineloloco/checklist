@@ -68,11 +68,11 @@ class _ChecklistAppState extends State<ChecklistApp>
     await widget.dependencies.syncCoordinator.syncNow();
   }
 
-  Future<void> _signIn(String email, String password) async {
+  Future<void> _signIn(String employeeNumber, String password) async {
     setState(() => _error = null);
     try {
       final session = await widget.dependencies.auth.signIn(
-        email: email,
+        employeeNumber: employeeNumber,
         password: password,
       );
       final identity = await widget.dependencies.checklistApi.me();
@@ -119,30 +119,32 @@ class _ChecklistAppState extends State<ChecklistApp>
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Checklists operacionais',
-        theme: buildAppTheme(),
-        locale: const Locale('pt', 'BR'),
-        supportedLocales: const [Locale('pt', 'BR')],
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        home: _loading
-            ? const _LaunchScreen()
-            : _session == null
-                ? LoginScreen(
-                    config: widget.dependencies.config,
-                    onSignIn: _signIn,
-                    error: _error,
-                  )
-                : HomeScreen(
-                    dependencies: widget.dependencies,
-                    onSignOut: _signOut,
-                    initialWarning: _error,
-                  ),
-      );
+    debugShowCheckedModeBanner: false,
+    title: 'Checklists operacionais',
+    theme: buildAppTheme(),
+    builder: (context, child) =>
+        SafeArea(top: false, child: child ?? const SizedBox.shrink()),
+    locale: const Locale('pt', 'BR'),
+    supportedLocales: const [Locale('pt', 'BR')],
+    localizationsDelegates: const [
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: _loading
+        ? const _LaunchScreen()
+        : _session == null
+        ? LoginScreen(
+            config: widget.dependencies.config,
+            onSignIn: _signIn,
+            error: _error,
+          )
+        : HomeScreen(
+            dependencies: widget.dependencies,
+            onSignOut: _signOut,
+            initialWarning: _error,
+          ),
+  );
 }
 
 class _LaunchScreen extends StatelessWidget {
@@ -150,18 +152,17 @@ class _LaunchScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.fact_check_outlined,
-                  size: 48, color: FieldColors.steel),
-              SizedBox(height: 18),
-              CircularProgressIndicator(),
-              SizedBox(height: 12),
-              Text('Abrindo dados salvos…'),
-            ],
-          ),
-        ),
-      );
+    body: Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.fact_check_outlined, size: 48, color: FieldColors.steel),
+          SizedBox(height: 18),
+          CircularProgressIndicator(),
+          SizedBox(height: 12),
+          Text('Abrindo dados salvos…'),
+        ],
+      ),
+    ),
+  );
 }

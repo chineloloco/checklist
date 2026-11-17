@@ -74,6 +74,7 @@ class LocalCompanies extends Table {
 
 class LocalSites extends Table {
   TextColumn get id => text()();
+  // Empty string represents a shared site; the API uses null for this value.
   TextColumn get companyId => text()();
   TextColumn get name => text()();
   BoolColumn get active => boolean().withDefault(const Constant(true))();

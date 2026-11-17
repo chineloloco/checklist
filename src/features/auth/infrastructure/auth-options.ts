@@ -1,5 +1,6 @@
 import { compare } from "bcryptjs";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
+import { employeeNumberSchema } from "@/features/auth/domain/employee-number";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import type { OAuthConfig } from "next-auth/providers/oauth";
@@ -31,9 +32,9 @@ function oidcProvider(): OAuthConfig<OidcProfile> | null {
         email: profile.email,
         name: profile.name ?? profile.email ?? "Usuário",
         organizationId: "",
-        roles: []
+        roles: [],
       };
-    }
+    },
   };
 }
 
@@ -46,27 +47,35 @@ if (process.env.AUTH_ALLOW_CREDENTIALS === "true") {
     CredentialsProvider({
       name: "Acesso local",
       credentials: {
-        email: { label: "E-mail", type: "email" },
-        password: { label: "Senha", type: "password" }
+        employeeNumber: { label: "Matrícula", type: "text" },
+        password: { label: "Senha", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials.password) return null;
+        const employeeNumber = employeeNumberSchema.safeParse(credentials?.employeeNumber);
+        if (!employeeNumber.success || !credentials?.password) return null;
         const database = getDb();
-        const [user] = await database
+        const matches = await database
           .select()
           .from(users)
-          .where(and(eq(users.email, credentials.email.toLowerCase()), eq(users.active, true)))
-          .limit(1);
-        if (!user?.passwordHash || !(await compare(credentials.password, user.passwordHash))) return null;
+          .where(
+            and(
+              sql`upper(trim(${users.employeeNumber})) = ${employeeNumber.data}`,
+              eq(users.active, true),
+            ),
+          )
+          .limit(2);
+        const user = matches.length === 1 ? matches[0] : null;
+        if (!user?.passwordHash || !(await compare(credentials.password, user.passwordHash)))
+          return null;
         return {
           id: user.id,
           email: user.email,
           name: user.displayName,
           organizationId: user.organizationId,
-          roles: user.roles as Role[]
+          roles: user.roles as Role[],
         };
-      }
-    })
+      },
+    }),
   );
 }
 
@@ -87,7 +96,11 @@ export const authOptions: NextAuthOptions = {
       if (!stored) return false;
       await database
         .update(users)
-        .set({ externalSubject: account.providerAccountId, lastLoginAt: new Date(), updatedAt: new Date() })
+        .set({
+          externalSubject: account.providerAccountId,
+          lastLoginAt: new Date(),
+          updatedAt: new Date(),
+        })
         .where(eq(users.id, stored.id));
       user.id = stored.id;
       user.organizationId = stored.organizationId;
@@ -109,17 +122,18 @@ export const authOptions: NextAuthOptions = {
         session.user.roles = (token.roles ?? []) as Role[];
       }
       return session;
-    }
+    },
   },
   cookies: {
     sessionToken: {
-      name: process.env.NODE_ENV === "production" ? "__Secure-checklist.session" : "checklist.session",
+      name:
+        process.env.NODE_ENV === "production" ? "__Secure-checklist.session" : "checklist.session",
       options: {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: process.env.NODE_ENV === "production"
-      }
-    }
-  }
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+  },
 };

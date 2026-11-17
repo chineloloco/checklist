@@ -27,7 +27,7 @@ class _IdentificationFormState extends State<IdentificationForm> {
   bool _showValidation = false;
 
   void _submit() {
-    if (_site == null || _person == null) {
+    if (_company == null || _site == null || _person == null) {
       setState(() => _showValidation = true);
       return;
     }
@@ -78,6 +78,24 @@ class _IdentificationFormState extends State<IdentificationForm> {
           ),
           const SizedBox(height: 18),
           RegistrySelectionTile(
+            label: 'Empresa',
+            value: _company?.name,
+            icon: Icons.business_outlined,
+            onTap: () async {
+              final company = await pickCompany(
+                context,
+                widget.dependencies.registryApi,
+              );
+              if (company != null && mounted) {
+                setState(() => _company = company);
+              }
+            },
+            errorText: _showValidation && _company == null
+                ? 'Selecione uma empresa.'
+                : null,
+          ),
+          const SizedBox(height: 12),
+          RegistrySelectionTile(
             label: 'Local',
             value: _site?.name,
             icon: Icons.location_on_outlined,
@@ -117,7 +135,7 @@ class _IdentificationFormState extends State<IdentificationForm> {
     if (value != null && mounted) {
       setState(() {
         _site = value.site;
-        _company = value.company;
+        _company = value.company ?? _company;
       });
     }
   }

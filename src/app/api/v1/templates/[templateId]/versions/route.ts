@@ -5,4 +5,13 @@ import { apiHandler, json, requireIdempotencyKey } from "@/shared/presentation/a
 const service = new TemplateService();
 type Params = { params: Promise<{ templateId: string }> };
 const schema = z.object({ basedOnVersionId: z.uuid() });
-export async function POST(request: NextRequest, { params }: Params) { return apiHandler("templates:write", async (context) => { requireIdempotencyKey(request); const body=schema.parse(await request.json()); return json(await service.createVersion(context,(await params).templateId,body.basedOnVersionId),{status:201}); }); }
+export async function POST(request: NextRequest, { params }: Params) {
+  return apiHandler("templates:write", async (context) => {
+    requireIdempotencyKey(request);
+    const body = schema.parse(await request.json());
+    return json(
+      await service.createVersion(context, (await params).templateId, body.basedOnVersionId),
+      { status: 201 },
+    );
+  });
+}

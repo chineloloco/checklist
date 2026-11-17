@@ -4,9 +4,10 @@ info:
   version: 0.1.0
   license:
     name: Proprietary
-  description: |
-    Contrato inicial compartilhado pela plataforma web e pelo aplicativo Flutter.
-    Datas locais usam o fuso fixado no checklist semanal; instantes são UTC.
+  description: >-
+    Contrato da plataforma web e do aplicativo Flutter. O login por senha usa matrícula. Datas
+    locais usam o fuso fixado na semana; instantes são UTC. As limitações de sincronização estão em
+    docs/mobile-contract-gaps.md.
 servers:
   - url: /api/v1
     description: Mesmo host da aplicação web ou base URL configurada no aplicativo
@@ -29,15 +30,20 @@ tags:
     description: Detecção e resolução explícita de concorrência.
   - name: Audit
     description: Histórico imutável de alterações relevantes.
+  - name: Users
+    description: Contas de acesso; exige users:manage (ORG_ADMIN).
+  - name: Registry
+    description: Empresas, locais e pessoas; leitura cadastros:read, escrita cadastros:write.
 security:
   - bearerAuth: []
-
+  - webSession: []
 paths:
   /auth/login:
     post:
-      tags: [Identity]
+      tags:
+        - Identity
       operationId: mobilePasswordLogin
-      summary: Inicia uma sessão móvel com usuário e senha internos
+      summary: Inicia sessão móvel com matrícula e senha
       security: []
       requestBody:
         required: true
@@ -45,18 +51,36 @@ paths:
           application/json:
             schema:
               type: object
-              required: [email, password]
+              required:
+                - employeeNumber
+                - password
               properties:
-                email: { type: string, format: email, maxLength: 320 }
-                password: { type: string, minLength: 1, maxLength: 200 }
-                deviceId: { type: string, maxLength: 100 }
+                employeeNumber:
+                  $ref: "#/components/schemas/EmployeeNumber"
+                password:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                  format: password
+                deviceId:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
       responses:
-        "200": { description: Access token e refresh token rotativo }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
+        "200":
+          description: Tokens e identidade; acesso de 15 minutos e refresh de 30 dias
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileTokenResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
   /auth/refresh:
     post:
-      tags: [Identity]
+      tags:
+        - Identity
       operationId: refreshMobileSession
       summary: Rotaciona o refresh token e emite um novo access token
       security: []
@@ -66,17 +90,29 @@ paths:
           application/json:
             schema:
               type: object
-              required: [refreshToken]
+              required:
+                - refreshToken
               properties:
-                refreshToken: { type: string, minLength: 32, maxLength: 500 }
-                deviceId: { type: string, maxLength: 100 }
+                refreshToken:
+                  type: string
+                  minLength: 32
+                  maxLength: 500
+                deviceId:
+                  type: string
+                  maxLength: 100
       responses:
-        "200": { description: Nova sessão móvel }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
+        "200":
+          description: Refresh rotacionado e novo access token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileTokenResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /auth/logout:
     post:
-      tags: [Identity]
+      tags:
+        - Identity
       operationId: logoutMobileSession
       summary: Revoga o refresh token móvel
       security: []
@@ -86,15 +122,20 @@ paths:
           application/json:
             schema:
               type: object
-              required: [refreshToken]
+              required:
+                - refreshToken
               properties:
-                refreshToken: { type: string, minLength: 32, maxLength: 500 }
+                refreshToken:
+                  type: string
+                  minLength: 32
+                  maxLength: 500
       responses:
-        "204": { description: Sessão encerrada }
-
+        "204":
+          description: Sessão encerrada
   /me:
     get:
-      tags: [Identity]
+      tags:
+        - Identity
       operationId: getMe
       summary: Retorna identidade, organização e permissões efetivas
       responses:
@@ -110,21 +151,26 @@ paths:
                 displayName: Ana Supervisor
                 timezone: America/Fortaleza
                 weekStartsOn: MONDAY
-                roles: [SUPERVISOR]
-                permissions: [templates:read, inspections:read, inspections:correct, conflicts:resolve]
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
+                roles:
+                  - SUPERVISOR
+                permissions:
+                  - templates:read
+                  - inspections:read
+                  - inspections:correct
+                  - conflicts:resolve
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /templates:
     get:
-      tags: [Templates]
+      tags:
+        - Templates
       operationId: listTemplates
       summary: Lista modelos visíveis
       parameters:
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
         - name: status
           in: query
-          schema: { $ref: "#/components/schemas/TemplateStatus" }
+          schema:
+            $ref: "#/components/schemas/TemplateStatus"
       responses:
         "200":
           description: Página de modelos
@@ -132,20 +178,29 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [data]
+                required:
+                  - data
                 properties:
                   data:
                     type: array
-                    items: { $ref: "#/components/schemas/TemplateSummary" }
-                  nextCursor: { type: [string, "null"] }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
+                    items:
+                      $ref: "#/components/schemas/TemplateSummary"
+                  nextCursor:
+                    type:
+                      - string
+                      - "null"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
     post:
-      tags: [Templates]
+      tags:
+        - Templates
       operationId: createTemplate
       summary: Cria modelo com primeira versão em rascunho
       security:
         - bearerAuth: []
+        - webSession: []
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
@@ -158,32 +213,43 @@ paths:
               code: VL
               name: Veículos leves
               assetKind: VEHICLE
+              identificationFields:
+                - company
+                - site
+                - assetCode
+                - responsiblePersonName
               sections:
-                - clientId: 019aa300-0000-7000-8000-000000000001
-                  title: Itens gerais
+                - title: Itens gerais
                   items:
-                    - clientId: 019aa300-0000-7000-8000-000000000002
-                      sourcePrintedNumber: "1"
+                    - sourcePrintedNumber: "1"
                       text: Carteira de habilitação
       responses:
         "201":
           description: Modelo criado
           headers:
-            Location: { schema: { type: string } }
+            Location:
+              schema:
+                type: string
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/TemplateDetail" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "409": { $ref: "#/components/responses/Conflict" }
-        "422": { $ref: "#/components/responses/ValidationFailed" }
-
+              schema:
+                $ref: "#/components/schemas/TemplateVersion"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
   /templates/{templateId}:
     parameters:
       - $ref: "#/components/parameters/TemplateId"
     get:
-      tags: [Templates]
+      tags:
+        - Templates
       operationId: getTemplate
       summary: Consulta modelo e versões
       responses:
@@ -191,21 +257,27 @@ paths:
           description: Modelo
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/TemplateDetail" }
-        "404": { $ref: "#/components/responses/NotFound" }
+              schema:
+                $ref: "#/components/schemas/TemplateDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
     delete:
-      tags: [Templates]
+      tags:
+        - Templates
       operationId: deleteUnusedDraftTemplate
       summary: Exclui modelo somente quando todo o conteúdo é rascunho e não possui uso
       security:
         - bearerAuth: []
+        - webSession: []
       responses:
-        "204": { description: Excluído }
+        "204":
+          description: Excluído
         "409":
           description: Modelo possui publicação ou referência e deve ser arquivado
           content:
             application/problem+json:
-              schema: { $ref: "#/components/schemas/Problem" }
+              schema:
+                $ref: "#/components/schemas/Problem"
               example:
                 type: https://api.example.com/problems/template-has-history
                 title: Modelo possui histórico
@@ -213,16 +285,48 @@ paths:
                 code: TEMPLATE_HAS_HISTORY
                 detail: Arquive o modelo em vez de excluí-lo.
                 traceId: 01JTESTTRACE000000000000001
-
+    patch:
+      tags:
+        - Templates
+      operationId: updateTemplateMetadata
+      summary: Confirma ou atualiza o nome do modelo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 200
+      responses:
+        "200":
+          description: Modelo atualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemplateSummary"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
   /templates/{templateId}/versions:
     parameters:
       - $ref: "#/components/parameters/TemplateId"
     post:
-      tags: [Templates]
+      tags:
+        - Templates
       operationId: createTemplateVersion
       summary: Cria nova versão em rascunho a partir de uma versão publicada
       security:
         - bearerAuth: []
+        - webSession: []
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
@@ -231,40 +335,52 @@ paths:
           application/json:
             schema:
               type: object
-              required: [basedOnVersionId]
+              required:
+                - basedOnVersionId
               properties:
-                basedOnVersionId: { $ref: "#/components/schemas/Uuid" }
+                basedOnVersionId:
+                  $ref: "#/components/schemas/Uuid"
       responses:
         "201":
           description: Versão em rascunho
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/TemplateVersion" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "409": { $ref: "#/components/responses/Conflict" }
-
+              schema:
+                $ref: "#/components/schemas/TemplateVersion"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /template-versions/{versionId}:
     parameters:
       - $ref: "#/components/parameters/VersionId"
     get:
-      tags: [Templates]
+      tags:
+        - Templates
       operationId: getTemplateVersion
       summary: Consulta o conteúdo completo de uma versão
       responses:
         "200":
           description: Conteúdo completo e ordenado
           headers:
-            ETag: { schema: { type: string }, example: '"rev-4"' }
+            ETag:
+              schema:
+                type: string
+              example: '"rev-4"'
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/TemplateVersion" }
-        "404": { $ref: "#/components/responses/NotFound" }
+              schema:
+                $ref: "#/components/schemas/TemplateVersion"
+        "404":
+          $ref: "#/components/responses/NotFound"
     patch:
-      tags: [Templates]
+      tags:
+        - Templates
       operationId: updateDraftTemplateVersion
       summary: Edita somente versão em rascunho
       security:
         - bearerAuth: []
+        - webSession: []
       parameters:
         - $ref: "#/components/parameters/IfMatch"
       requestBody:
@@ -278,17 +394,21 @@ paths:
           description: Rascunho atualizado
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/TemplateVersion" }
-        "409": { $ref: "#/components/responses/RevisionConflict" }
-        "422": { $ref: "#/components/responses/ValidationFailed" }
-
+              schema:
+                $ref: "#/components/schemas/TemplateVersion"
+        "409":
+          $ref: "#/components/responses/RevisionConflict"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
   /template-versions/{versionId}/publish:
     post:
-      tags: [Templates]
+      tags:
+        - Templates
       operationId: publishTemplateVersion
       summary: Publica e torna a versão imutável
       security:
         - bearerAuth: []
+        - webSession: []
       parameters:
         - $ref: "#/components/parameters/VersionId"
         - $ref: "#/components/parameters/IfMatch"
@@ -298,7 +418,8 @@ paths:
           description: Versão publicada
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/TemplateVersion" }
+              schema:
+                $ref: "#/components/schemas/TemplateVersion"
               example:
                 id: 019aa400-0000-7000-8000-000000000001
                 templateId: 019aa400-0000-7000-8000-000000000002
@@ -306,19 +427,22 @@ paths:
                 status: PUBLISHED
                 revision: 5
                 checksum: sha256:5c59d8f0example
-                publishedAt: 2026-11-14T20:30:00Z
+                publishedAt: 2026-11-14T20:30:00.000Z
                 publishedBy: 019aa111-1111-7111-8111-111111111111
                 sections: []
-        "409": { $ref: "#/components/responses/Conflict" }
-        "422": { $ref: "#/components/responses/ValidationFailed" }
-
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
   /templates/{templateId}/archive:
     post:
-      tags: [Templates]
+      tags:
+        - Templates
       operationId: archiveTemplate
       summary: Impede novos usos sem remover histórico
       security:
         - bearerAuth: []
+        - webSession: []
       parameters:
         - $ref: "#/components/parameters/TemplateId"
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -327,29 +451,37 @@ paths:
           description: Modelo arquivado
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/TemplateSummary" }
-        "409": { $ref: "#/components/responses/Conflict" }
-
+              schema:
+                $ref: "#/components/schemas/TemplateSummary"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /mobile/bootstrap:
     get:
-      tags: [Mobile]
+      tags:
+        - Mobile
       operationId: getMobileBootstrap
       summary: Baixa manifesto e dados necessários ao trabalho offline
       parameters:
         - name: siteId
           in: query
-          schema: { $ref: "#/components/schemas/Uuid" }
+          schema:
+            $ref: "#/components/schemas/Uuid"
         - name: sinceCursor
           in: query
-          schema: { type: string, maxLength: 200 }
+          schema:
+            type: string
+            maxLength: 200
       responses:
         "200":
           description: Manifesto incremental
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/MobileBootstrap" }
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/MobileBootstrap"
+                  - $ref: "#/components/schemas/SyncPullResponse"
               example:
-                serverTime: 2026-11-14T20:35:00Z
+                serverTime: 2026-11-14T20:35:00.000Z
                 cursor: org_42_00000125
                 timezone: America/Fortaleza
                 weekStartsOn: MONDAY
@@ -360,53 +492,88 @@ paths:
                     status: PUBLISHED
                     revision: 5
                     checksum: sha256:5c59d8f0example
-                    publishedAt: 2026-11-14T20:30:00Z
+                    publishedAt: 2026-11-14T20:30:00.000Z
                     publishedBy: 019aa111-1111-7111-8111-111111111111
                     sections: []
                 assets: []
                 operationConfigs: []
                 tombstones: []
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      description: >-
+        Sem sinceCursor retorna o catálogo completo; com sinceCursor numérico não zero delega ao
+        pull incremental.
   /assets:
     get:
-      tags: [Assets]
+      tags:
+        - Assets
       operationId: listAssets
-      summary: Lista veículos e equipamentos autorizados
-      parameters:
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
-        - name: siteId
-          in: query
-          schema: { $ref: "#/components/schemas/Uuid" }
+      summary: Lista ativos da organização
+      description: Sem paginação ou filtros de consulta nesta rota.
       responses:
         "200":
-          description: Ativos autorizados
+          description: Cadastros
           content:
             application/json:
               schema:
                 type: object
-                required: [data]
+                required:
+                  - data
                 properties:
-                  data: { type: array, items: { $ref: "#/components/schemas/Asset" } }
-                  nextCursor: { type: [string, "null"] }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AssetListEntry"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags:
+        - Assets
+      operationId: createAsset
+      summary: Cria cadastro Asset
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAssetRequest"
+      responses:
+        "201":
+          description: Cadastro criado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Asset"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
   /weekly-checklists:
     get:
-      tags: [Weekly checklists]
+      tags:
+        - Weekly checklists
       operationId: listWeeklyChecklists
       summary: Lista checklists por ativo, modelo e semana
       parameters:
-        - name: assetId
-          in: query
-          schema: { $ref: "#/components/schemas/Uuid" }
-        - name: templateId
-          in: query
-          schema: { $ref: "#/components/schemas/Uuid" }
         - name: weekStartDate
           in: query
-          schema: { type: string, format: date }
+          schema:
+            type: string
+            format: date
+        - name: assetId
+          in: query
+          schema:
+            $ref: "#/components/schemas/Uuid"
+        - name: templateId
+          in: query
+          schema:
+            $ref: "#/components/schemas/Uuid"
       responses:
         "200":
           description: Checklists semanais
@@ -414,16 +581,23 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [data]
+                required:
+                  - data
                 properties:
-                  data: { type: array, items: { $ref: "#/components/schemas/WeeklyChecklist" } }
-        "401": { $ref: "#/components/responses/Unauthorized" }
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/WeeklyChecklistListEntry"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
     post:
-      tags: [Weekly checklists]
+      tags:
+        - Weekly checklists
       operationId: openWeeklyChecklist
       summary: Abre a semana e fixa versão/configuração
       security:
         - bearerAuth: []
+        - webSession: []
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
@@ -432,58 +606,79 @@ paths:
           application/json:
             schema:
               type: object
-              required: [assetId, templateId, localDate]
+              required:
+                - assetId
+                - templateId
+                - localDate
               properties:
-                clientWeeklyChecklistId: { $ref: "#/components/schemas/Uuid" }
-                assetId: { $ref: "#/components/schemas/Uuid" }
-                templateId: { $ref: "#/components/schemas/Uuid" }
-                localDate: { type: string, format: date }
+                clientWeeklyChecklistId:
+                  $ref: "#/components/schemas/Uuid"
+                assetId:
+                  $ref: "#/components/schemas/Uuid"
+                templateId:
+                  $ref: "#/components/schemas/Uuid"
+                localDate:
+                  type: string
+                  format: date
+                templateVersionId:
+                  $ref: "#/components/schemas/Uuid"
+                operationConfigId:
+                  $ref: "#/components/schemas/Uuid"
+              description: >-
+                IDs opcionais permitem fixar versão/configuração baixadas pelo cliente. Retorna a
+                semana existente para a mesma chave de negócio.
             example:
               clientWeeklyChecklistId: 019aa500-0000-7000-8000-000000000001
               assetId: 019aa500-0000-7000-8000-000000000002
               templateId: 019aa400-0000-7000-8000-000000000002
-              localDate: 2026-11-10
+              localDate: 2026-11-10T00:00:00.000Z
       responses:
         "201":
           description: Checklist aberto; se já existir, idempotência retorna o mesmo recurso
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/WeeklyChecklist" }
+              schema:
+                $ref: "#/components/schemas/WeeklyChecklist"
               example:
                 id: 019aa500-0000-7000-8000-000000000001
                 assetId: 019aa500-0000-7000-8000-000000000002
                 templateId: 019aa400-0000-7000-8000-000000000002
                 templateVersionId: 019aa400-0000-7000-8000-000000000001
                 operationConfigId: 019aa500-0000-7000-8000-000000000003
-                weekStartDate: 2026-11-09
+                weekStartDate: 2026-11-09T00:00:00.000Z
                 timezone: America/Fortaleza
                 revision: 1
-                createdAt: 2026-11-10T11:00:00Z
-        "409": { $ref: "#/components/responses/Conflict" }
-        "422": { $ref: "#/components/responses/ValidationFailed" }
-
+                createdAt: 2026-11-10T11:00:00.000Z
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
   /weekly-checklists/{weeklyChecklistId}:
     get:
-      tags: [Weekly checklists]
+      tags:
+        - Weekly checklists
       operationId: getWeeklyChecklist
       summary: Consulta o checklist semanal e suas inspeções
       parameters:
         - $ref: "#/components/parameters/WeeklyChecklistId"
       responses:
         "200":
-          description: Checklist, slots e inspeções
+          description: Visão semanal consolidada
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/WeeklyChecklistDetail" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+              schema:
+                $ref: "#/components/schemas/WeeklyView"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /weekly-checklists/{weeklyChecklistId}/inspections:
     post:
-      tags: [Inspections]
+      tags:
+        - Inspections
       operationId: createInspection
       summary: Cria inspeção por data; preserva candidata em conflito de slot
       security:
         - bearerAuth: []
+        - webSession: []
       parameters:
         - $ref: "#/components/parameters/WeeklyChecklistId"
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -491,11 +686,12 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/CreateInspectionRequest" }
+            schema:
+              $ref: "#/components/schemas/CreateInspectionRequest"
             example:
               clientInspectionId: 019aa600-0000-7000-8000-000000000001
               deviceId: flutter-7b9c0e
-              localDate: 2026-11-10
+              localDate: 2026-11-10T00:00:00.000Z
               occurrenceNo: 1
               lifecycleStatus: DRAFT
               identification:
@@ -509,7 +705,7 @@ paths:
                 vehicleMakeModel: Marca Modelo
                 responsiblePersonName: João da Silva
                 driverLicenseNumber: "00000000000"
-                driverLicenseExpiryDate: 2028-05-20
+                driverLicenseExpiryDate: 2028-05-20T00:00:00.000Z
               responses:
                 - itemId: 019aa600-0000-7000-8000-000000000010
                   result: C
@@ -519,12 +715,14 @@ paths:
           description: Inspeção criada
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/Inspection" }
+              schema:
+                $ref: "#/components/schemas/InspectionMutationResult"
         "409":
           description: Conflito de slot ou idempotência incompatível; payload candidato foi preservado
           content:
             application/problem+json:
-              schema: { $ref: "#/components/schemas/Problem" }
+              schema:
+                $ref: "#/components/schemas/Problem"
               example:
                 type: https://api.example.com/problems/duplicate-slot
                 title: Outra inspeção ocupa o mesmo slot
@@ -535,11 +733,12 @@ paths:
                 conflictId: 019aa700-0000-7000-8000-000000000001
                 existingInspectionId: 019aa600-0000-7000-8000-000000000099
                 candidateInspectionId: 019aa600-0000-7000-8000-000000000001
-        "422": { $ref: "#/components/responses/ValidationFailed" }
-
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
   /weekly-checklists/{weeklyChecklistId}/view:
     get:
-      tags: [Weekly checklists]
+      tags:
+        - Weekly checklists
       operationId: getWeeklyView
       summary: Retorna matriz semanal com itens em linhas e inspeções em colunas
       parameters:
@@ -549,22 +748,23 @@ paths:
           description: Visão consolidada sem inferir pendência em dias não exigidos
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/WeeklyView" }
+              schema:
+                $ref: "#/components/schemas/WeeklyView"
               example:
                 weeklyChecklistId: 019aa500-0000-7000-8000-000000000001
-                weekStartDate: 2026-11-09
+                weekStartDate: 2026-11-09T00:00:00.000Z
                 timezone: America/Fortaleza
                 columns:
                   - inspectionId: 019aa600-0000-7000-8000-000000000001
                     id: 019aa600-0000-7000-8000-000000000001
-                    localDate: 2026-11-10
+                    localDate: 2026-11-10T00:00:00.000Z
                     occurrenceNo: 1
                     lifecycleStatus: COMPLETED
                     revision: 2
                     required: false
                   - inspectionId: 019aa600-0000-7000-8000-000000000002
                     id: 019aa600-0000-7000-8000-000000000002
-                    localDate: 2026-11-12
+                    localDate: 2026-11-12T00:00:00.000Z
                     occurrenceNo: 1
                     lifecycleStatus: DRAFT
                     revision: 1
@@ -584,54 +784,66 @@ paths:
                             result: NC
                             observation: Documento não apresentado
                 requiredSlots: []
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        "404":
+          $ref: "#/components/responses/NotFound"
   /inspections/{inspectionId}:
     parameters:
       - $ref: "#/components/parameters/InspectionId"
     get:
-      tags: [Inspections]
+      tags:
+        - Inspections
       operationId: getInspection
       summary: Consulta a revisão atual de uma inspeção
       responses:
         "200":
           description: Inspeção atual
           headers:
-            ETag: { schema: { type: string }, example: '"rev-3"' }
+            ETag:
+              schema:
+                type: string
+              example: '"rev-3"'
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/Inspection" }
-        "404": { $ref: "#/components/responses/NotFound" }
+              schema:
+                $ref: "#/components/schemas/Inspection"
+        "404":
+          $ref: "#/components/responses/NotFound"
     patch:
-      tags: [Inspections]
+      tags:
+        - Inspections
       operationId: updateDraftInspection
       summary: Atualiza rascunho com concorrência otimista
       security:
         - bearerAuth: []
+        - webSession: []
       parameters:
         - $ref: "#/components/parameters/IfMatch"
-        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/UpdateInspectionRequest" }
+            schema:
+              $ref: "#/components/schemas/UpdateInspectionRequest"
       responses:
         "200":
           description: Rascunho salvo
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/Inspection" }
-        "409": { $ref: "#/components/responses/RevisionConflict" }
-        "422": { $ref: "#/components/responses/ValidationFailed" }
-
+              schema:
+                $ref: "#/components/schemas/InspectionMutationResult"
+        "409":
+          $ref: "#/components/responses/RevisionConflict"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
   /inspections/{inspectionId}/complete:
     post:
-      tags: [Inspections]
+      tags:
+        - Inspections
       operationId: completeInspection
       summary: Conclui uma data sem afetar outras datas da semana
       security:
         - bearerAuth: []
+        - webSession: []
       parameters:
         - $ref: "#/components/parameters/InspectionId"
         - $ref: "#/components/parameters/IfMatch"
@@ -641,13 +853,16 @@ paths:
           description: Inspeção concluída
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/Inspection" }
-        "409": { $ref: "#/components/responses/RevisionConflict" }
+              schema:
+                $ref: "#/components/schemas/InspectionMutationResult"
+        "409":
+          $ref: "#/components/responses/RevisionConflict"
         "422":
           description: Campos/respostas exigidos ausentes
           content:
             application/problem+json:
-              schema: { $ref: "#/components/schemas/Problem" }
+              schema:
+                $ref: "#/components/schemas/Problem"
               example:
                 type: https://api.example.com/problems/validation-failed
                 title: Não foi possível concluir a inspeção
@@ -659,14 +874,16 @@ paths:
                   - pointer: /responses/3/result
                     code: REQUIRED
                     message: Selecione C, NC ou NA.
-
   /inspections/{inspectionId}/corrections:
     post:
-      tags: [Inspections, Audit]
+      tags:
+        - Inspections
+        - Audit
       operationId: correctInspection
       summary: Cria nova revisão sem apagar a concluída
       security:
         - bearerAuth: []
+        - webSession: []
       parameters:
         - $ref: "#/components/parameters/InspectionId"
         - $ref: "#/components/parameters/IfMatch"
@@ -676,41 +893,45 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [reason, changes]
-              properties:
-                reason: { type: string, minLength: 3, maxLength: 1000 }
-                changes:
-                  type: array
-                  minItems: 1
-                  items: { $ref: "#/components/schemas/JsonPatchOperation" }
-            example:
-              reason: Correção após conferência do supervisor
-              changes:
-                - op: replace
-                  path: /responses/019aa600-0000-7000-8000-000000000010/result
-                  value: NC
+              allOf:
+                - $ref: "#/components/schemas/UpdateInspectionRequest"
+                - type: object
+                  required:
+                    - correctionReason
+                  properties:
+                    correctionReason:
+                      type: string
+                      minLength: 3
+                      maxLength: 1000
       responses:
         "200":
           description: Revisão corrigida
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/Inspection" }
-        "409": { $ref: "#/components/responses/RevisionConflict" }
-        "422": { $ref: "#/components/responses/ValidationFailed" }
-
+              schema:
+                $ref: "#/components/schemas/InspectionMutationResult"
+        "409":
+          $ref: "#/components/responses/RevisionConflict"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+      description: >-
+        Envia identificação, respostas e correctionReason. A implementação recebe um snapshot, não
+        JSON Patch.
   /sync/push:
     post:
-      tags: [Sync]
+      tags:
+        - Sync
       operationId: syncPush
       summary: Envia lote idempotente da outbox; resultado é individual por operação
       security:
         - bearerAuth: []
+        - webSession: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/SyncPushRequest" }
+            schema:
+              $ref: "#/components/schemas/SyncPushRequest"
             example:
               deviceId: flutter-7b9c0e
               operations:
@@ -719,10 +940,10 @@ paths:
                   mutation: UPSERT
                   entityId: 019aa600-0000-7000-8000-000000000001
                   baseRevision: null
-                  clientOccurredAt: 2026-11-10T11:30:00-03:00
+                  clientOccurredAt: 2026-11-10T14:30:00.000Z
                   payload:
                     weeklyChecklistId: 019aa500-0000-7000-8000-000000000001
-                    localDate: 2026-11-10
+                    localDate: 2026-11-10T00:00:00.000Z
                     occurrenceNo: 1
                     lifecycleStatus: COMPLETED
                     identification: {}
@@ -732,60 +953,71 @@ paths:
           description: Lote recebido; operações podem ter resultados diferentes
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/SyncPushResponse" }
+              schema:
+                $ref: "#/components/schemas/SyncPushResponse"
               example:
-                serverTime: 2026-11-14T20:40:00Z
+                serverTime: 2026-11-14T20:40:00.000Z
                 results:
                   - operationId: 019aa800-0000-7000-8000-000000000001
                     status: APPLIED
                     entityId: 019aa600-0000-7000-8000-000000000001
                     serverRevision: 1
                     problem: null
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "413":
-          description: Lote excede 100 operações ou 2 MiB
-          content:
-            application/problem+json:
-              schema: { $ref: "#/components/schemas/Problem" }
-
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
   /sync/pull:
     get:
-      tags: [Sync]
+      tags:
+        - Sync
       operationId: syncPull
       summary: Retorna alterações autorizadas após o cursor
       security:
         - bearerAuth: []
+        - webSession: []
       parameters:
         - name: cursor
           in: query
-          required: true
-          schema: { type: string, minLength: 1, maxLength: 200 }
+          required: false
+          description: Sequência após a qual consultar; ausente inicia em zero.
+          schema:
+            type: string
+            pattern: ^[0-9]+$
+            default: "0"
         - name: limit
           in: query
-          schema: { type: integer, minimum: 1, maximum: 500, default: 200 }
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 200
       responses:
         "200":
           description: Alterações e tombstones
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/SyncPullResponse" }
-        "410":
-          description: Cursor expirado; cliente deve executar novo bootstrap sem apagar mutações locais
-          content:
-            application/problem+json:
-              schema: { $ref: "#/components/schemas/Problem" }
-
+              schema:
+                $ref: "#/components/schemas/SyncPullResponse"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
   /conflicts:
     get:
-      tags: [Conflicts]
+      tags:
+        - Conflicts
       operationId: listConflicts
       summary: Lista conflitos abertos ou resolvidos
       security:
         - bearerAuth: []
+        - webSession: []
       parameters:
         - name: status
           in: query
-          schema: { type: string, enum: [OPEN, RESOLVED] }
+          schema:
+            type: string
+            enum:
+              - OPEN
+              - RESOLVED
       responses:
         "200":
           description: Casos de conflito
@@ -793,18 +1025,24 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [data]
+                required:
+                  - data
                 properties:
-                  data: { type: array, items: { $ref: "#/components/schemas/ConflictCase" } }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ConflictCase"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /conflicts/{conflictId}:
     get:
-      tags: [Conflicts]
+      tags:
+        - Conflicts
       operationId: getConflict
       summary: Consulta membros e diferenças de um conflito
       security:
         - bearerAuth: []
+        - webSession: []
       parameters:
         - $ref: "#/components/parameters/ConflictId"
       responses:
@@ -812,16 +1050,20 @@ paths:
           description: Conflito com payloads e diferenças
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ConflictCase" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+              schema:
+                $ref: "#/components/schemas/ConflictCase"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /conflicts/{conflictId}/resolve:
     post:
-      tags: [Conflicts, Audit]
+      tags:
+        - Conflicts
+        - Audit
       operationId: resolveConflict
       summary: Resolve conflito sem eliminar os registros originais
       security:
         - bearerAuth: []
+        - webSession: []
       parameters:
         - $ref: "#/components/parameters/ConflictId"
         - $ref: "#/components/parameters/IfMatch"
@@ -830,7 +1072,8 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/ResolveConflictRequest" }
+            schema:
+              $ref: "#/components/schemas/ResolveConflictRequest"
             examples:
               choosePrimary:
                 value:
@@ -850,25 +1093,31 @@ paths:
           description: Conflito resolvido e auditado
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ConflictCase" }
-        "409": { $ref: "#/components/responses/RevisionConflict" }
-        "422": { $ref: "#/components/responses/ValidationFailed" }
-
+              schema:
+                $ref: "#/components/schemas/ConflictCase"
+        "409":
+          $ref: "#/components/responses/RevisionConflict"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
   /audit-events:
     get:
-      tags: [Audit]
+      tags:
+        - Audit
       operationId: listAuditEvents
       summary: Lista eventos imutáveis de auditoria
       security:
         - bearerAuth: []
+        - webSession: []
       parameters:
         - name: entityType
           in: query
-          schema: { type: string, maxLength: 50 }
+          schema:
+            type: string
+            maxLength: 50
         - name: entityId
           in: query
-          schema: { $ref: "#/components/schemas/Uuid" }
-        - $ref: "#/components/parameters/Cursor"
+          schema:
+            $ref: "#/components/schemas/Uuid"
       responses:
         "200":
           description: Eventos append-only
@@ -876,80 +1125,641 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [data]
+                required:
+                  - data
                 properties:
-                  data: { type: array, items: { $ref: "#/components/schemas/AuditEvent" } }
-                  nextCursor: { type: [string, "null"] }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AuditEvent"
+                  nextCursor:
+                    type:
+                      - string
+                      - "null"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      description: Até 200 eventos, do mais recente ao mais antigo; nextCursor é null na implementação atual.
+  /users:
+    get:
+      tags:
+        - Users
+      operationId: listUsers
+      summary: Lista as contas da organização
+      responses:
+        "200":
+          description: Contas sem hashes de senha
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ManagedUser"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags:
+        - Users
+      operationId: createUser
+      summary: Cadastra conta por matrícula
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: Conta criada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManagedUser"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+  /users/{userId}:
+    patch:
+      tags:
+        - Users
+      operationId: updateUser
+      summary: Edita conta, redefine senha ou altera situação
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "200":
+          description: Conta atualizada e ação auditada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManagedUser"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+  /companies:
+    get:
+      tags:
+        - Registry
+      operationId: listCompanies
+      summary: Lista empresas da organização
+      description: Sem paginação ou filtros de consulta nesta rota.
+      responses:
+        "200":
+          description: Cadastros
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Company"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags:
+        - Registry
+      operationId: createCompany
+      summary: Cria cadastro Company
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCompanyRequest"
+      responses:
+        "201":
+          description: Cadastro criado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+  /companies/{companyId}:
+    patch:
+      tags:
+        - Registry
+      operationId: updateCompany
+      summary: Edita cadastro ativo
+      description: Envia os campos exigidos pelo schema de criação; não é um patch de campos arbitrários.
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCompanyRequest"
+      responses:
+        "200":
+          description: Cadastro atualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+    delete:
+      tags:
+        - Registry
+      operationId: deactivateCompany
+      summary: Desativa sem apagar o histórico
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+      responses:
+        "204":
+          description: Cadastro desativado
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /sites:
+    get:
+      tags:
+        - Registry
+      operationId: listSites
+      summary: Lista locais da organização
+      description: Sem paginação ou filtros de consulta nesta rota.
+      responses:
+        "200":
+          description: Cadastros
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Site"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags:
+        - Registry
+      operationId: createSite
+      summary: Cria cadastro Site
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSiteRequest"
+      responses:
+        "201":
+          description: Cadastro criado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Site"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+  /sites/{siteId}:
+    patch:
+      tags:
+        - Registry
+      operationId: updateSite
+      summary: Edita cadastro ativo
+      description: Envia os campos exigidos pelo schema de criação; não é um patch de campos arbitrários.
+      parameters:
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSiteRequest"
+      responses:
+        "200":
+          description: Cadastro atualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Site"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+    delete:
+      tags:
+        - Registry
+      operationId: deactivateSite
+      summary: Desativa sem apagar o histórico
+      parameters:
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+      responses:
+        "204":
+          description: Cadastro desativado
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /people:
+    get:
+      tags:
+        - Registry
+      operationId: listPeople
+      summary: Lista pessoas da organização
+      description: Retorna pessoas ativas e omite o cadastro legado Responsável pelo preenchimento.
+      responses:
+        "200":
+          description: Cadastros
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Person"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags:
+        - Registry
+      operationId: createPerson
+      summary: Cria cadastro Person
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePersonRequest"
+      responses:
+        "201":
+          description: Cadastro criado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Person"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+  /people/{personId}:
+    patch:
+      tags:
+        - Registry
+      operationId: updatePerson
+      summary: Edita cadastro ativo
+      description: Envia os campos exigidos pelo schema de criação; não é um patch de campos arbitrários.
+      parameters:
+        - name: personId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePersonRequest"
+      responses:
+        "200":
+          description: Cadastro atualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Person"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+    delete:
+      tags:
+        - Registry
+      operationId: deactivatePerson
+      summary: Desativa sem apagar o histórico
+      parameters:
+        - name: personId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+      responses:
+        "204":
+          description: Cadastro desativado
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /assets/{assetId}:
+    patch:
+      tags:
+        - Assets
+      operationId: updateAsset
+      summary: Edita cadastro ativo
+      description: Envia os campos exigidos pelo schema de criação; não é um patch de campos arbitrários.
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAssetRequest"
+      responses:
+        "200":
+          description: Cadastro atualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Asset"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+    delete:
+      tags:
+        - Assets
+      operationId: deactivateAsset
+      summary: Desativa sem apagar o histórico
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+      responses:
+        "204":
+          description: Cadastro desativado
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /assets/{assetId}/templates:
+    post:
+      tags:
+        - Assets
+      operationId: assignAssetTemplate
+      summary: Associa um ativo a modelo e configuração
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - templateId
+                - operationConfigId
+              properties:
+                templateId:
+                  $ref: "#/components/schemas/Uuid"
+                operationConfigId:
+                  $ref: "#/components/schemas/Uuid"
+      responses:
+        "201":
+          description: Associação criada/atualizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetTemplateAssignment"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /inspections/{inspectionId}/attachments/{attachmentId}:
+    get:
+      tags:
+        - Inspections
+      operationId: getInspectionAttachment
+      summary: Lê foto da revisão atual
+      parameters:
+        - name: inspectionId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+        - name: attachmentId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+      responses:
+        "200":
+          description: Imagem; cache privado por 300 segundos
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: Access token curto emitido por `/auth/login` ou `/auth/refresh`. O web usa sessão segura no BFF.
-
+      description: >-
+        Access token curto emitido por `/auth/login` ou `/auth/refresh`. O web usa sessão segura no
+        BFF.
+    webSession:
+      type: apiKey
+      in: cookie
+      name: __Secure-checklist.session
+      description: Sessão NextAuth em produção; no desenvolvimento o nome é checklist.session.
   parameters:
     TemplateId:
       name: templateId
       in: path
       required: true
-      schema: { $ref: "#/components/schemas/Uuid" }
+      schema:
+        $ref: "#/components/schemas/Uuid"
     VersionId:
       name: versionId
       in: path
       required: true
-      schema: { $ref: "#/components/schemas/Uuid" }
+      schema:
+        $ref: "#/components/schemas/Uuid"
     WeeklyChecklistId:
       name: weeklyChecklistId
       in: path
       required: true
-      schema: { $ref: "#/components/schemas/Uuid" }
+      schema:
+        $ref: "#/components/schemas/Uuid"
     InspectionId:
       name: inspectionId
       in: path
       required: true
-      schema: { $ref: "#/components/schemas/Uuid" }
+      schema:
+        $ref: "#/components/schemas/Uuid"
     ConflictId:
       name: conflictId
       in: path
       required: true
-      schema: { $ref: "#/components/schemas/Uuid" }
+      schema:
+        $ref: "#/components/schemas/Uuid"
     IdempotencyKey:
       name: Idempotency-Key
       in: header
       required: true
       description: UUID por intenção de mutação; o mesmo valor com payload diferente retorna 409.
-      schema: { type: string, format: uuid }
+      schema:
+        type: string
+        format: uuid
     IfMatch:
       name: If-Match
       in: header
       required: true
       description: ETag da revisão lida, por exemplo `"rev-3"`.
-      schema: { type: string, pattern: '^"rev-[0-9]+"$' }
+      schema:
+        type: string
+        pattern: ^"rev-[0-9]+"$
     Cursor:
       name: cursor
       in: query
-      schema: { type: string, maxLength: 200 }
+      schema:
+        type: string
+        pattern: ^[0-9]+$
+        example: "0"
+      description: Sequência numérica em texto; a implementação atual não utiliza cursor opaco.
     Limit:
       name: limit
       in: query
-      schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
-
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
   responses:
     BadRequest:
       description: Requisição malformada
       content:
         application/problem+json:
-          schema: { $ref: "#/components/schemas/Problem" }
+          schema:
+            $ref: "#/components/schemas/Problem"
     Unauthorized:
       description: Token ausente, expirado ou inválido
       headers:
-        WWW-Authenticate: { schema: { type: string } }
+        WWW-Authenticate:
+          schema:
+            type: string
       content:
         application/problem+json:
-          schema: { $ref: "#/components/schemas/Problem" }
+          schema:
+            $ref: "#/components/schemas/Problem"
           example:
             type: https://api.example.com/problems/unauthorized
             title: Autenticação necessária
@@ -961,22 +1771,26 @@ components:
       description: Identidade autenticada sem permissão no escopo solicitado
       content:
         application/problem+json:
-          schema: { $ref: "#/components/schemas/Problem" }
+          schema:
+            $ref: "#/components/schemas/Problem"
     NotFound:
       description: Recurso inexistente ou fora do escopo da organização
       content:
         application/problem+json:
-          schema: { $ref: "#/components/schemas/Problem" }
+          schema:
+            $ref: "#/components/schemas/Problem"
     Conflict:
       description: Conflito de estado, unicidade ou idempotência
       content:
         application/problem+json:
-          schema: { $ref: "#/components/schemas/Problem" }
+          schema:
+            $ref: "#/components/schemas/Problem"
     RevisionConflict:
       description: A revisão enviada ficou desatualizada
       content:
         application/problem+json:
-          schema: { $ref: "#/components/schemas/Problem" }
+          schema:
+            $ref: "#/components/schemas/Problem"
           example:
             type: https://api.example.com/problems/revision-conflict
             title: O registro foi alterado em outro lugar
@@ -989,477 +1803,1842 @@ components:
       description: Regras de domínio ou campos inválidos
       content:
         application/problem+json:
-          schema: { $ref: "#/components/schemas/Problem" }
-
+          schema:
+            $ref: "#/components/schemas/Problem"
   schemas:
     Uuid:
       type: string
       format: uuid
     TemplateStatus:
       type: string
-      enum: [DRAFT, ACTIVE, ARCHIVED]
+      enum:
+        - DRAFT
+        - ACTIVE
+        - ARCHIVED
     TemplateVersionStatus:
       type: string
-      enum: [DRAFT, PUBLISHED, ARCHIVED]
+      enum:
+        - DRAFT
+        - PUBLISHED
+        - ARCHIVED
     AssetKind:
       type: string
-      enum: [VEHICLE, EQUIPMENT]
+      enum:
+        - VEHICLE
+        - EQUIPMENT
     LifecycleStatus:
       type: string
-      enum: [DRAFT, COMPLETED, CORRECTED, VOIDED]
+      enum:
+        - DRAFT
+        - COMPLETED
+        - CORRECTED
+        - VOIDED
     Result:
-      type: [string, "null"]
-      enum: [C, NC, NA, null]
+      type:
+        - string
+        - "null"
+      enum:
+        - C
+        - NC
+        - NA
+        - null
     OwnershipType:
       type: string
-      enum: [OWN, THIRD_PARTY]
-
+      enum:
+        - OWN
+        - THIRD_PARTY
     Me:
       type: object
       additionalProperties: false
-      required: [userId, organizationId, displayName, timezone, weekStartsOn, roles, permissions]
+      required:
+        - userId
+        - organizationId
+        - displayName
+        - timezone
+        - weekStartsOn
+        - roles
+        - permissions
       properties:
-        userId: { $ref: "#/components/schemas/Uuid" }
-        organizationId: { $ref: "#/components/schemas/Uuid" }
-        displayName: { type: string }
-        timezone: { type: string, example: America/Fortaleza }
-        weekStartsOn: { type: string, const: MONDAY }
-        roles: { type: array, items: { type: string } }
-        permissions: { type: array, items: { type: string } }
-
+        userId:
+          $ref: "#/components/schemas/Uuid"
+        organizationId:
+          $ref: "#/components/schemas/Uuid"
+        displayName:
+          type: string
+        timezone:
+          type: string
+          example: America/Fortaleza
+        weekStartsOn:
+          type: string
+          const: MONDAY
+        roles:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
     TemplateSummary:
       type: object
-      additionalProperties: false
-      required: [id, code, name, assetKind, status]
+      required:
+        - id
+        - code
+        - name
+        - assetKind
+        - status
       properties:
-        id: { $ref: "#/components/schemas/Uuid" }
-        code: { type: string, minLength: 1, maxLength: 40, pattern: '^[A-Z0-9_]+$' }
-        name: { type: [string, "null"], maxLength: 200 }
-        assetKind: { $ref: "#/components/schemas/AssetKind" }
-        status: { $ref: "#/components/schemas/TemplateStatus" }
-        publishedVersionId: { oneOf: [{ $ref: "#/components/schemas/Uuid" }, { type: "null" }] }
+        id:
+          $ref: "#/components/schemas/Uuid"
+        code:
+          type: string
+          minLength: 1
+          maxLength: 40
+          pattern: ^[A-Z0-9_]+$
+        name:
+          type:
+            - string
+            - "null"
+          maxLength: 200
+        assetKind:
+          $ref: "#/components/schemas/AssetKind"
+        status:
+          $ref: "#/components/schemas/TemplateStatus"
+        identificationStatus:
+          type: string
+        latestVersion:
+          type:
+            - integer
+            - "null"
+        publishedVersions:
+          type:
+            - integer
+            - string
     TemplateDetail:
       allOf:
         - $ref: "#/components/schemas/TemplateSummary"
         - type: object
-          required: [versions]
+          required:
+            - versions
           properties:
-            versions: { type: array, items: { $ref: "#/components/schemas/TemplateVersionSummary" } }
+            versions:
+              type: array
+              items:
+                $ref: "#/components/schemas/TemplateVersionSummary"
     TemplateVersionSummary:
       type: object
-      required: [id, versionNumber, status, revision]
+      required:
+        - id
+        - versionNumber
+        - status
+        - revision
       properties:
-        id: { $ref: "#/components/schemas/Uuid" }
-        versionNumber: { type: integer, minimum: 1 }
-        status: { $ref: "#/components/schemas/TemplateVersionStatus" }
-        revision: { type: integer, minimum: 1 }
-        checksum: { type: [string, "null"] }
-        publishedAt: { type: [string, "null"], format: date-time }
+        id:
+          $ref: "#/components/schemas/Uuid"
+        versionNumber:
+          type: integer
+          minimum: 1
+        status:
+          $ref: "#/components/schemas/TemplateVersionStatus"
+        revision:
+          type: integer
+          minimum: 1
+        checksum:
+          type:
+            - string
+            - "null"
+        publishedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        identificationFields:
+          type: array
+          items:
+            type: string
     TemplateVersion:
       type: object
-      additionalProperties: false
-      required: [id, templateId, versionNumber, status, revision, sections]
+      required:
+        - id
+        - templateId
+        - versionNumber
+        - status
+        - revision
+        - sections
       properties:
-        id: { $ref: "#/components/schemas/Uuid" }
-        templateId: { $ref: "#/components/schemas/Uuid" }
-        versionNumber: { type: integer, minimum: 1 }
-        status: { $ref: "#/components/schemas/TemplateVersionStatus" }
-        revision: { type: integer, minimum: 1 }
-        checksum: { type: [string, "null"] }
-        publishedAt: { type: [string, "null"], format: date-time }
-        publishedBy: { oneOf: [{ $ref: "#/components/schemas/Uuid" }, { type: "null" }] }
-        template: { $ref: "#/components/schemas/TemplateSummary" }
-        sections: { type: array, items: { $ref: "#/components/schemas/TemplateSection" } }
+        id:
+          $ref: "#/components/schemas/Uuid"
+        templateId:
+          $ref: "#/components/schemas/Uuid"
+        versionNumber:
+          type: integer
+          minimum: 1
+        status:
+          $ref: "#/components/schemas/TemplateVersionStatus"
+        revision:
+          type: integer
+          minimum: 1
+        checksum:
+          type:
+            - string
+            - "null"
+        publishedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        publishedBy:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        template:
+          $ref: "#/components/schemas/TemplateSummary"
+        sections:
+          type: array
+          items:
+            $ref: "#/components/schemas/TemplateSection"
+        identificationFields:
+          type: array
+          items:
+            type: string
     TemplateSection:
       type: object
-      additionalProperties: false
-      required: [id, title, order, items]
+      required:
+        - id
+        - versionId
+        - title
+        - sortOrder
+        - items
       properties:
-        id: { $ref: "#/components/schemas/Uuid" }
-        title: { type: string, minLength: 1, maxLength: 300 }
-        order: { type: integer, minimum: 0 }
-        items: { type: array, items: { $ref: "#/components/schemas/TemplateItem" } }
+        id:
+          $ref: "#/components/schemas/Uuid"
+        versionId:
+          $ref: "#/components/schemas/Uuid"
+        title:
+          type: string
+          maxLength: 300
+        sortOrder:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TemplateItem"
     TemplateItem:
       type: object
-      additionalProperties: false
-      required: [id, text, order]
+      required:
+        - id
+        - sectionId
+        - versionId
+        - originalText
+        - sortOrder
+        - requiredOnComplete
+        - requireObservationWhenNc
+        - requirePhotoWhenNc
       properties:
-        id: { $ref: "#/components/schemas/Uuid" }
-        sourcePrintedNumber: { type: [string, "null"], maxLength: 20 }
-        text: { type: string, minLength: 1, maxLength: 2000 }
-        order: { type: integer, minimum: 0 }
-        requiredOnComplete: { type: boolean, default: true }
-        requireObservationWhenNc: { type: boolean, default: false }
-        requirePhotoWhenNc: { type: boolean, default: false }
+        id:
+          $ref: "#/components/schemas/Uuid"
+        sectionId:
+          $ref: "#/components/schemas/Uuid"
+        versionId:
+          $ref: "#/components/schemas/Uuid"
+        sourcePrintedNumber:
+          type:
+            - string
+            - "null"
+          maxLength: 20
+        originalText:
+          type: string
+        sortOrder:
+          type: integer
+        requiredOnComplete:
+          type: boolean
+        requireObservationWhenNc:
+          type: boolean
+        requirePhotoWhenNc:
+          type: boolean
     CreateTemplateRequest:
       type: object
       additionalProperties: false
-      required: [code, name, assetKind, sections]
+      required:
+        - code
+        - name
+        - assetKind
+        - identificationFields
+        - sections
       properties:
-        code: { type: string, minLength: 1, maxLength: 40, pattern: '^[A-Z0-9_]+$' }
-        name: { type: [string, "null"], maxLength: 200 }
-        assetKind: { $ref: "#/components/schemas/AssetKind" }
+        code:
+          type: string
+          minLength: 1
+          maxLength: 40
+          pattern: ^[A-Z0-9_]+$
+        name:
+          type:
+            - string
+            - "null"
+          maxLength: 200
+        assetKind:
+          $ref: "#/components/schemas/AssetKind"
         sections:
           type: array
           minItems: 1
+          maxItems: 50
           items:
-            type: object
-            required: [clientId, title, items]
-            properties:
-              clientId: { $ref: "#/components/schemas/Uuid" }
-              title: { type: string, minLength: 1, maxLength: 300 }
-              items:
-                type: array
-                minItems: 1
-                items:
-                  type: object
-                  required: [clientId, text]
-                  properties:
-                    clientId: { $ref: "#/components/schemas/Uuid" }
-                    sourcePrintedNumber: { type: [string, "null"], maxLength: 20 }
-                    text: { type: string, minLength: 1, maxLength: 2000 }
+            $ref: "#/components/schemas/TemplateSectionInput"
+        identificationFields:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            type: string
+            minLength: 1
+            maxLength: 80
     UpdateTemplateVersionRequest:
       type: object
+      required:
+        - identificationFields
+        - sections
       properties:
-        sections: { type: array, minItems: 1, items: { $ref: "#/components/schemas/TemplateSection" } }
-
+        identificationFields:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            type: string
+            minLength: 1
+            maxLength: 80
+        sections:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/TemplateSectionInput"
+      description: >-
+        A revisão base é obtida de If-Match; as posições das seções e itens são definidas pela ordem
+        dos arrays.
     Asset:
       type: object
-      additionalProperties: false
-      required: [id, kind, code, revision, active]
+      required:
+        - id
+        - kind
+        - code
+        - revision
+        - active
+        - companyId
+        - ownershipType
       properties:
-        id: { $ref: "#/components/schemas/Uuid" }
-        kind: { $ref: "#/components/schemas/AssetKind" }
-        code: { type: string, minLength: 1, maxLength: 100 }
-        active: { type: boolean }
-        revision: { type: integer, minimum: 1 }
-        siteId: { oneOf: [{ $ref: "#/components/schemas/Uuid" }, { type: "null" }] }
-        licensePlate: { type: [string, "null"], maxLength: 20 }
-        makeModel: { type: [string, "null"], maxLength: 200 }
-        manufacturer: { type: [string, "null"], maxLength: 200 }
-        manufactureYear: { type: [integer, "null"], minimum: 1900, maximum: 2200 }
-        predominantColor: { type: [string, "null"], maxLength: 80 }
-        ownershipType: { $ref: "#/components/schemas/OwnershipType" }
-
+        id:
+          $ref: "#/components/schemas/Uuid"
+        kind:
+          $ref: "#/components/schemas/AssetKind"
+        code:
+          type: string
+          minLength: 1
+          maxLength: 100
+        active:
+          type: boolean
+        revision:
+          type: integer
+          minimum: 1
+        siteId:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        licensePlate:
+          type:
+            - string
+            - "null"
+          maxLength: 20
+        makeModel:
+          type:
+            - string
+            - "null"
+          maxLength: 200
+        manufacturer:
+          type:
+            - string
+            - "null"
+          maxLength: 200
+        manufactureYear:
+          type:
+            - integer
+            - "null"
+          minimum: 1900
+          maximum: 2200
+        predominantColor:
+          type:
+            - string
+            - "null"
+          maxLength: 80
+        ownershipType:
+          $ref: "#/components/schemas/OwnershipType"
+        companyId:
+          $ref: "#/components/schemas/Uuid"
     OperationConfig:
       type: object
-      required: [id, templateId, timezone, weekStartsOn, requiredWeekdays, maxOccurrencesPerDate]
+      required:
+        - id
+        - templateId
+        - timezone
+        - weekStartsOn
+        - requiredWeekdays
+        - maxOccurrencesPerDate
       properties:
-        id: { $ref: "#/components/schemas/Uuid" }
-        templateId: { $ref: "#/components/schemas/Uuid" }
-        timezone: { type: string }
-        weekStartsOn: { type: string, const: MONDAY }
+        id:
+          $ref: "#/components/schemas/Uuid"
+        templateId:
+          $ref: "#/components/schemas/Uuid"
+        timezone:
+          type: string
+        weekStartsOn:
+          type: string
+          const: MONDAY
         requiredWeekdays:
           type: array
-          items: { type: string, enum: [MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY] }
-        maxOccurrencesPerDate: { type: integer, minimum: 1, maximum: 20 }
-
+          items:
+            type: string
+            enum:
+              - MONDAY
+              - TUESDAY
+              - WEDNESDAY
+              - THURSDAY
+              - FRIDAY
+              - SATURDAY
+              - SUNDAY
+        maxOccurrencesPerDate:
+          type: integer
+          minimum: 1
+          maximum: 20
     AssetTemplateAssignment:
       type: object
-      additionalProperties: false
-      required: [id, assetId, templateId, operationConfigId, active]
+      required:
+        - id
+        - assetId
+        - templateId
+        - operationConfigId
+        - active
       properties:
-        id: { $ref: "#/components/schemas/Uuid" }
-        assetId: { $ref: "#/components/schemas/Uuid" }
-        templateId: { $ref: "#/components/schemas/Uuid" }
-        operationConfigId: { $ref: "#/components/schemas/Uuid" }
-        active: { type: boolean }
-
+        id:
+          $ref: "#/components/schemas/Uuid"
+        assetId:
+          $ref: "#/components/schemas/Uuid"
+        templateId:
+          $ref: "#/components/schemas/Uuid"
+        operationConfigId:
+          $ref: "#/components/schemas/Uuid"
+        active:
+          type: boolean
     WeeklyChecklist:
       type: object
-      additionalProperties: false
-      required: [id, assetId, templateId, templateVersionId, operationConfigId, weekStartDate, timezone, revision, createdAt]
+      required:
+        - id
+        - assetId
+        - templateId
+        - templateVersionId
+        - operationConfigId
+        - weekStartDate
+        - timezone
+        - revision
+        - createdAt
       properties:
-        id: { $ref: "#/components/schemas/Uuid" }
-        assetId: { $ref: "#/components/schemas/Uuid" }
-        templateId: { $ref: "#/components/schemas/Uuid" }
-        templateVersionId: { $ref: "#/components/schemas/Uuid" }
-        operationConfigId: { $ref: "#/components/schemas/Uuid" }
-        weekStartDate: { type: string, format: date }
-        timezone: { type: string }
-        revision: { type: integer, minimum: 1 }
-        createdAt: { type: string, format: date-time }
+        id:
+          $ref: "#/components/schemas/Uuid"
+        assetId:
+          $ref: "#/components/schemas/Uuid"
+        templateId:
+          $ref: "#/components/schemas/Uuid"
+        templateVersionId:
+          $ref: "#/components/schemas/Uuid"
+        operationConfigId:
+          $ref: "#/components/schemas/Uuid"
+        weekStartDate:
+          type: string
+          format: date
+        timezone:
+          type: string
+        revision:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
     WeeklyChecklistDetail:
       allOf:
         - $ref: "#/components/schemas/WeeklyChecklist"
         - type: object
-          required: [inspections]
+          required:
+            - inspections
           properties:
-            inspections: { type: array, items: { $ref: "#/components/schemas/InspectionSummary" } }
-
+            inspections:
+              type: array
+              items:
+                $ref: "#/components/schemas/InspectionSummary"
     IdentificationSnapshot:
       type: object
-      additionalProperties: false
-      required: [company, site, assetCode, ownershipType, responsiblePersonName]
+      additionalProperties: true
+      required:
+        - company
+        - site
+        - assetCode
+        - ownershipType
+        - responsiblePersonName
       properties:
-        company: { type: string, minLength: 1, maxLength: 200 }
-        site: { type: string, minLength: 1, maxLength: 200 }
-        manufactureYear: { type: [integer, "null"], minimum: 1900, maximum: 2200 }
-        predominantColor: { type: [string, "null"], maxLength: 80 }
-        assetCode: { type: string, minLength: 1, maxLength: 100 }
-        ownershipType: { $ref: "#/components/schemas/OwnershipType" }
-        licensePlate: { type: [string, "null"], maxLength: 20 }
-        vehicleMakeModel: { type: [string, "null"], maxLength: 200 }
-        manufacturer: { type: [string, "null"], maxLength: 200 }
-        responsiblePersonId: { oneOf: [{ $ref: "#/components/schemas/Uuid" }, { type: "null" }] }
-        responsiblePersonName: { type: string, minLength: 1, maxLength: 200 }
-        driverLicenseNumber: { type: [string, "null"], maxLength: 30 }
-        driverLicenseExpiryDate: { type: [string, "null"], format: date }
-        moppExpiryDate: { type: [string, "null"], format: date }
-        passengerTransportCourseExpiryDate: { type: [string, "null"], format: date }
+        company:
+          type: string
+          minLength: 1
+          maxLength: 200
+        site:
+          type: string
+          minLength: 1
+          maxLength: 200
+        manufactureYear:
+          type:
+            - integer
+            - "null"
+          minimum: 1900
+          maximum: 2200
+        predominantColor:
+          type:
+            - string
+            - "null"
+          maxLength: 80
+        assetCode:
+          type: string
+          minLength: 1
+          maxLength: 100
+        ownershipType:
+          $ref: "#/components/schemas/OwnershipType"
+        licensePlate:
+          type:
+            - string
+            - "null"
+          maxLength: 20
+        vehicleMakeModel:
+          type:
+            - string
+            - "null"
+          maxLength: 200
+        manufacturer:
+          type:
+            - string
+            - "null"
+          maxLength: 200
+        responsiblePersonId:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        responsiblePersonName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        driverLicenseNumber:
+          type:
+            - string
+            - "null"
+          maxLength: 30
+        driverLicenseExpiryDate:
+          type:
+            - string
+            - "null"
+          format: date
+        moppExpiryDate:
+          type:
+            - string
+            - "null"
+          format: date
+        passengerTransportCourseExpiryDate:
+          type:
+            - string
+            - "null"
+          format: date
     InspectionResponse:
       type: object
       additionalProperties: false
-      required: [itemId, result]
+      required:
+        - itemId
+        - result
       properties:
-        itemId: { $ref: "#/components/schemas/Uuid" }
-        result: { $ref: "#/components/schemas/Result" }
-        observation: { type: [string, "null"], maxLength: 4000 }
+        itemId:
+          $ref: "#/components/schemas/Uuid"
+        result:
+          $ref: "#/components/schemas/Result"
+        observation:
+          type:
+            - string
+            - "null"
+          maxLength: 4000
     CreateInspectionRequest:
       type: object
       additionalProperties: false
-      required: [clientInspectionId, deviceId, localDate, occurrenceNo, lifecycleStatus, identification, responses]
+      required:
+        - clientInspectionId
+        - deviceId
+        - localDate
+        - lifecycleStatus
+        - identification
+        - responses
       properties:
-        clientInspectionId: { $ref: "#/components/schemas/Uuid" }
-        deviceId: { type: string, minLength: 1, maxLength: 100 }
-        localDate: { type: string, format: date }
-        occurrenceNo: { type: integer, minimum: 1, maximum: 20 }
-        lifecycleStatus: { type: string, enum: [DRAFT, COMPLETED] }
-        identification: { $ref: "#/components/schemas/IdentificationSnapshot" }
-        observations: { type: [string, "null"], maxLength: 10000 }
-        responses: { type: array, items: { $ref: "#/components/schemas/InspectionResponse" } }
+        clientInspectionId:
+          $ref: "#/components/schemas/Uuid"
+        deviceId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        localDate:
+          type: string
+          format: date
+        occurrenceNo:
+          type: integer
+          minimum: 1
+          maximum: 20
+          default: 1
+        lifecycleStatus:
+          type: string
+          enum:
+            - DRAFT
+            - COMPLETED
+        identification:
+          $ref: "#/components/schemas/IdentificationSnapshot"
+        observations:
+          type:
+            - string
+            - "null"
+          maxLength: 10000
+        responses:
+          type: array
+          items:
+            $ref: "#/components/schemas/InspectionResponse"
+          maxItems: 500
+        attachments:
+          type: array
+          maxItems: 5
+          default: []
+          items:
+            $ref: "#/components/schemas/InspectionAttachment"
+        operationId:
+          $ref: "#/components/schemas/Uuid"
     UpdateInspectionRequest:
       type: object
       additionalProperties: false
       properties:
-        identification: { $ref: "#/components/schemas/IdentificationSnapshot" }
-        observations: { type: [string, "null"], maxLength: 10000 }
-        responses: { type: array, items: { $ref: "#/components/schemas/InspectionResponse" } }
+        identification:
+          $ref: "#/components/schemas/IdentificationSnapshot"
+        observations:
+          type:
+            - string
+            - "null"
+          maxLength: 10000
+        responses:
+          type: array
+          maxItems: 500
+          items:
+            $ref: "#/components/schemas/InspectionResponse"
+        lifecycleStatus:
+          type: string
+          enum:
+            - DRAFT
+            - COMPLETED
+            - CORRECTED
+        correctionReason:
+          type: string
+          minLength: 3
+          maxLength: 1000
+        operationId:
+          $ref: "#/components/schemas/Uuid"
+        deviceId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        attachments:
+          type: array
+          maxItems: 5
+          default: []
+          items:
+            $ref: "#/components/schemas/InspectionAttachment"
+      required:
+        - identification
+        - responses
+      description: >-
+        baseRevision é obtida do cabeçalho If-Match na rota HTTP e de baseRevision na operação de
+        sync.
     InspectionSummary:
       type: object
-      required: [id, localDate, occurrenceNo, lifecycleStatus, revision]
+      required:
+        - id
+        - localDate
+        - occurrenceNo
+        - lifecycleStatus
+        - revision
       properties:
-        id: { $ref: "#/components/schemas/Uuid" }
-        localDate: { type: string, format: date }
-        occurrenceNo: { type: integer, minimum: 1 }
-        lifecycleStatus: { $ref: "#/components/schemas/LifecycleStatus" }
-        revision: { type: integer, minimum: 1 }
+        id:
+          $ref: "#/components/schemas/Uuid"
+        localDate:
+          type: string
+          format: date
+        occurrenceNo:
+          type: integer
+          minimum: 1
+        lifecycleStatus:
+          $ref: "#/components/schemas/LifecycleStatus"
+        revision:
+          type: integer
+          minimum: 1
     Inspection:
       allOf:
         - $ref: "#/components/schemas/InspectionSummary"
         - type: object
-          required: [weeklyChecklistId, clientInspectionId, identification, responses, createdAt, updatedAt]
+          required:
+            - weeklyChecklistId
+            - clientInspectionId
+            - identification
+            - responses
+            - history
+            - attachments
           properties:
-            weeklyChecklistId: { $ref: "#/components/schemas/Uuid" }
-            clientInspectionId: { $ref: "#/components/schemas/Uuid" }
-            identification: { $ref: "#/components/schemas/IdentificationSnapshot" }
-            observations: { type: [string, "null"] }
-            responses: { type: array, items: { $ref: "#/components/schemas/InspectionResponse" } }
-            createdAt: { type: string, format: date-time }
-            updatedAt: { type: string, format: date-time }
-
+            weeklyChecklistId:
+              $ref: "#/components/schemas/Uuid"
+            clientInspectionId:
+              $ref: "#/components/schemas/Uuid"
+            identification:
+              $ref: "#/components/schemas/IdentificationSnapshot"
+            observations:
+              type:
+                - string
+                - "null"
+            responses:
+              type: array
+              items:
+                $ref: "#/components/schemas/InspectionResponse"
+            attachments:
+              type: array
+              maxItems: 5
+              default: []
+              items:
+                $ref: "#/components/schemas/InspectionAttachment"
+            history:
+              type: array
+              items:
+                $ref: "#/components/schemas/InspectionRevisionHistory"
+            correctionReason:
+              type:
+                - string
+                - "null"
+              maxLength: 1000
     WeeklyView:
       type: object
-      required: [weeklyChecklistId, weekStartDate, timezone, columns, sections, requiredSlots]
+      required:
+        - weeklyChecklistId
+        - weekStartDate
+        - timezone
+        - columns
+        - sections
+        - requiredSlots
+        - asset
       properties:
-        weeklyChecklistId: { $ref: "#/components/schemas/Uuid" }
-        weekStartDate: { type: string, format: date }
-        timezone: { type: string }
+        weeklyChecklistId:
+          $ref: "#/components/schemas/Uuid"
+        weekStartDate:
+          type: string
+          format: date
+        timezone:
+          type: string
         columns:
           type: array
           items:
             allOf:
               - $ref: "#/components/schemas/InspectionSummary"
               - type: object
-                required: [required]
-                properties: { required: { type: boolean } }
+                required:
+                  - required
+                properties:
+                  required:
+                    type: boolean
+                  conflict:
+                    type: boolean
+                  identification:
+                    $ref: "#/components/schemas/IdentificationSnapshot"
+                  observations:
+                    type:
+                      - string
+                      - "null"
+                  attachments:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - mediaType
+                        - fileName
+                      properties:
+                        id:
+                          $ref: "#/components/schemas/Uuid"
+                        mediaType:
+                          type: string
+                        fileName:
+                          type: string
         sections:
           type: array
           items:
             type: object
-            required: [sectionId, title, items]
+            required:
+              - sectionId
+              - title
+              - items
             properties:
-              sectionId: { $ref: "#/components/schemas/Uuid" }
-              title: { type: string }
+              sectionId:
+                $ref: "#/components/schemas/Uuid"
+              title:
+                type: string
               items:
                 type: array
                 items:
                   type: object
-                  required: [itemId, text, cells]
+                  required:
+                    - itemId
+                    - text
+                    - cells
                   properties:
-                    itemId: { $ref: "#/components/schemas/Uuid" }
-                    sourcePrintedNumber: { type: [string, "null"] }
-                    text: { type: string }
+                    itemId:
+                      $ref: "#/components/schemas/Uuid"
+                    sourcePrintedNumber:
+                      type:
+                        - string
+                        - "null"
+                    text:
+                      type: string
                     cells:
                       type: array
                       items:
                         type: object
-                        required: [inspectionId, result]
+                        required:
+                          - inspectionId
+                          - result
                         properties:
-                          inspectionId: { $ref: "#/components/schemas/Uuid" }
-                          result: { $ref: "#/components/schemas/Result" }
-                          observation: { type: [string, "null"] }
+                          inspectionId:
+                            $ref: "#/components/schemas/Uuid"
+                          result:
+                            $ref: "#/components/schemas/Result"
+                          observation:
+                            type:
+                              - string
+                              - "null"
         requiredSlots:
           type: array
           items:
             type: object
-            required: [localDate, occurrenceNo, fulfilled]
+            required:
+              - localDate
+              - occurrenceNo
+              - fulfilled
             properties:
-              localDate: { type: string, format: date }
-              occurrenceNo: { type: integer, minimum: 1 }
-              fulfilled: { type: boolean }
-
+              localDate:
+                type: string
+                format: date
+              occurrenceNo:
+                type: integer
+                minimum: 1
+              fulfilled:
+                type: boolean
+              uncertainty:
+                type: string
+        asset:
+          type: object
+          required:
+            - code
+            - templateName
+            - site
+            - company
+          properties:
+            code:
+              type: string
+            templateName:
+              type:
+                - string
+                - "null"
+            site:
+              type:
+                - string
+                - "null"
+            company:
+              type: string
     MobileBootstrap:
       type: object
-      required: [serverTime, cursor, timezone, weekStartsOn, templateVersions, assets, operationConfigs, assetTemplateAssignments, tombstones]
+      required:
+        - serverTime
+        - cursor
+        - timezone
+        - weekStartsOn
+        - templateVersions
+        - assets
+        - operationConfigs
+        - assetTemplateAssignments
+        - tombstones
+        - companies
+        - sites
+        - people
       properties:
-        serverTime: { type: string, format: date-time }
-        cursor: { type: string }
-        timezone: { type: string }
-        weekStartsOn: { type: string, const: MONDAY }
-        templateVersions: { type: array, items: { $ref: "#/components/schemas/TemplateVersion" } }
-        assets: { type: array, items: { $ref: "#/components/schemas/Asset" } }
-        operationConfigs: { type: array, items: { $ref: "#/components/schemas/OperationConfig" } }
-        assetTemplateAssignments: { type: array, items: { $ref: "#/components/schemas/AssetTemplateAssignment" } }
-        tombstones: { type: array, items: { $ref: "#/components/schemas/Tombstone" } }
+        serverTime:
+          type: string
+          format: date-time
+        cursor:
+          type: string
+          pattern: ^[0-9]+$
+          example: "0"
+        timezone:
+          type: string
+        weekStartsOn:
+          type: string
+          const: MONDAY
+        templateVersions:
+          type: array
+          items:
+            $ref: "#/components/schemas/TemplateVersion"
+        assets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Asset"
+        operationConfigs:
+          type: array
+          items:
+            $ref: "#/components/schemas/OperationConfig"
+        assetTemplateAssignments:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetTemplateAssignment"
+        tombstones:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tombstone"
+        companies:
+          type: array
+          items:
+            $ref: "#/components/schemas/Company"
+        sites:
+          type: array
+          items:
+            $ref: "#/components/schemas/Site"
+        people:
+          type: array
+          items:
+            $ref: "#/components/schemas/Person"
+      description: >-
+        Catálogos ativos para operação offline. Não contém o histórico completo de semanas e
+        inspeções de outros aparelhos.
     Tombstone:
       type: object
-      required: [entityType, entityId, deletedAt]
+      required:
+        - entityType
+        - entityId
+        - deletedAt
       properties:
-        entityType: { type: string }
-        entityId: { $ref: "#/components/schemas/Uuid" }
-        deletedAt: { type: string, format: date-time }
-
+        entityType:
+          type: string
+        entityId:
+          $ref: "#/components/schemas/Uuid"
+        deletedAt:
+          type: string
+          format: date-time
+        changeType:
+          type: string
+          enum:
+            - ARCHIVE
+            - DELETE
     SyncOperation:
       type: object
       additionalProperties: false
-      required: [operationId, entityType, mutation, entityId, clientOccurredAt, payload]
+      required:
+        - operationId
+        - entityType
+        - mutation
+        - entityId
+        - clientOccurredAt
+        - payload
       properties:
-        operationId: { $ref: "#/components/schemas/Uuid" }
-        entityType: { type: string, enum: [WEEKLY_CHECKLIST, INSPECTION] }
-        mutation: { type: string, enum: [UPSERT, COMPLETE, VOID] }
-        entityId: { $ref: "#/components/schemas/Uuid" }
-        baseRevision: { type: [integer, "null"], minimum: 1 }
-        clientOccurredAt: { type: string, format: date-time }
-        payload: { type: object, additionalProperties: true }
+        operationId:
+          $ref: "#/components/schemas/Uuid"
+        entityType:
+          type: string
+          enum:
+            - COMPANY
+            - SITE
+            - PERSON
+            - ASSET
+            - WEEKLY_CHECKLIST
+            - INSPECTION
+            - AUDIT_EVENT
+        mutation:
+          type: string
+          enum:
+            - UPSERT
+            - COMPLETE
+            - VOID
+        entityId:
+          $ref: "#/components/schemas/Uuid"
+        baseRevision:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+        clientOccurredAt:
+          type: string
+          format: date-time
+        payload:
+          type: object
+          additionalProperties: true
+      description: >-
+        Cadastros aceitam UPSERT sem revisão base. INSPECTION sem baseRevision cria; com
+        baseRevision atualiza/conclui. AUDIT_EVENT aceita VOID apenas para registrar desativação
+        local, com payload localDate e assetCode. Não anula inspeção já enviada.
     SyncPushRequest:
       type: object
       additionalProperties: false
-      required: [deviceId, operations]
+      required:
+        - deviceId
+        - operations
       properties:
-        deviceId: { type: string, minLength: 1, maxLength: 100 }
-        operations: { type: array, minItems: 1, maxItems: 100, items: { $ref: "#/components/schemas/SyncOperation" } }
+        deviceId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        operations:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/SyncOperation"
     SyncOperationResult:
       type: object
-      required: [operationId, status, entityId]
+      required:
+        - operationId
+        - status
+        - entityId
       properties:
-        operationId: { $ref: "#/components/schemas/Uuid" }
-        status: { type: string, enum: [APPLIED, ALREADY_APPLIED, CONFLICT, REJECTED] }
-        entityId: { $ref: "#/components/schemas/Uuid" }
-        serverRevision: { type: [integer, "null"] }
-        problem: { oneOf: [{ $ref: "#/components/schemas/Problem" }, { type: "null" }] }
+        operationId:
+          $ref: "#/components/schemas/Uuid"
+        status:
+          type: string
+          enum:
+            - APPLIED
+            - ALREADY_APPLIED
+            - CONFLICT
+            - REJECTED
+        entityId:
+          $ref: "#/components/schemas/Uuid"
+        serverRevision:
+          type:
+            - integer
+            - "null"
+        problem:
+          type:
+            - object
+            - "null"
+          additionalProperties: true
+          properties:
+            code:
+              type: string
+            detail:
+              type: string
+            conflictId:
+              $ref: "#/components/schemas/Uuid"
+          description: Problema resumido da operação; não exige todos os campos de Problem Details.
     SyncPushResponse:
       type: object
-      required: [serverTime, results]
+      required:
+        - serverTime
+        - results
       properties:
-        serverTime: { type: string, format: date-time }
-        results: { type: array, items: { $ref: "#/components/schemas/SyncOperationResult" } }
+        serverTime:
+          type: string
+          format: date-time
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/SyncOperationResult"
     SyncPullResponse:
       type: object
-      required: [serverTime, nextCursor, hasMore, changes, tombstones]
+      required:
+        - serverTime
+        - nextCursor
+        - hasMore
+        - changes
+        - tombstones
       properties:
-        serverTime: { type: string, format: date-time }
-        nextCursor: { type: string }
-        hasMore: { type: boolean }
+        serverTime:
+          type: string
+          format: date-time
+        nextCursor:
+          type: string
+          pattern: ^[0-9]+$
+          example: "0"
+        hasMore:
+          type: boolean
         changes:
           type: array
           items:
             type: object
-            required: [entityType, entityId, revision, payload]
+            required:
+              - entityType
+              - entityId
+              - revision
+              - payload
             properties:
-              entityType: { type: string }
-              entityId: { $ref: "#/components/schemas/Uuid" }
-              revision: { type: integer, minimum: 1 }
-              payload: { type: object, additionalProperties: true }
-        tombstones: { type: array, items: { $ref: "#/components/schemas/Tombstone" } }
-
+              entityType:
+                type: string
+              entityId:
+                $ref: "#/components/schemas/Uuid"
+              revision:
+                type: integer
+                minimum: 1
+              payload:
+                type: object
+                additionalProperties: true
+        tombstones:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tombstone"
     ConflictCase:
       type: object
-      required: [id, type, status, revision, members, createdAt]
+      required:
+        - id
+        - type
+        - status
+        - revision
+        - members
+        - createdAt
       properties:
-        id: { $ref: "#/components/schemas/Uuid" }
-        type: { type: string, enum: [DUPLICATE_SLOT, REVISION_CONFLICT] }
-        status: { type: string, enum: [OPEN, RESOLVED] }
-        revision: { type: integer, minimum: 1 }
+        id:
+          $ref: "#/components/schemas/Uuid"
+        type:
+          type: string
+          enum:
+            - DUPLICATE_SLOT
+            - REVISION_CONFLICT
+        status:
+          type: string
+          enum:
+            - OPEN
+            - RESOLVED
+        revision:
+          type: integer
+          minimum: 1
         members:
           type: array
           minItems: 2
           items:
             type: object
-            required: [inspectionId, role]
+            required:
+              - inspectionId
+              - role
             properties:
-              inspectionId: { $ref: "#/components/schemas/Uuid" }
-              role: { type: string, enum: [EXISTING, CANDIDATE, RESOLVED_PRIMARY] }
-        differences: { type: array, items: { type: object, additionalProperties: true } }
-        resolution: { type: [string, "null"], enum: [CHOOSE_PRIMARY, KEEP_SEPARATE, MERGE, null] }
-        reason: { type: [string, "null"] }
-        resolvedBy: { oneOf: [{ $ref: "#/components/schemas/Uuid" }, { type: "null" }] }
-        resolvedAt: { type: [string, "null"], format: date-time }
-        createdAt: { type: string, format: date-time }
+              inspectionId:
+                $ref: "#/components/schemas/Uuid"
+              role:
+                type: string
+                enum:
+                  - EXISTING
+                  - CANDIDATE
+                  - RESOLVED_PRIMARY
+        differences:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        resolution:
+          type:
+            - string
+            - "null"
+          enum:
+            - CHOOSE_PRIMARY
+            - KEEP_SEPARATE
+            - MERGE
+            - null
+        reason:
+          type:
+            - string
+            - "null"
+        resolvedBy:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        resolvedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
     ResolveConflictRequest:
       type: object
       additionalProperties: false
-      required: [resolution, reason]
+      required:
+        - resolution
+        - reason
       properties:
-        resolution: { type: string, enum: [CHOOSE_PRIMARY, KEEP_SEPARATE, MERGE] }
-        primaryInspectionId: { oneOf: [{ $ref: "#/components/schemas/Uuid" }, { type: "null" }] }
-        reason: { type: string, minLength: 3, maxLength: 2000 }
+        resolution:
+          type: string
+          enum:
+            - CHOOSE_PRIMARY
+            - KEEP_SEPARATE
+            - MERGE
+        primaryInspectionId:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        reason:
+          type: string
+          minLength: 3
+          maxLength: 2000
         itemChoices:
           type: array
           items:
             type: object
-            required: [itemId, sourceInspectionId]
+            required:
+              - itemId
+              - sourceInspectionId
             properties:
-              itemId: { $ref: "#/components/schemas/Uuid" }
-              sourceInspectionId: { $ref: "#/components/schemas/Uuid" }
-
+              itemId:
+                $ref: "#/components/schemas/Uuid"
+              sourceInspectionId:
+                $ref: "#/components/schemas/Uuid"
     JsonPatchOperation:
       type: object
       additionalProperties: false
-      required: [op, path]
+      required:
+        - op
+        - path
       properties:
-        op: { type: string, enum: [add, remove, replace] }
-        path: { type: string, pattern: '^/' }
+        op:
+          type: string
+          enum:
+            - add
+            - remove
+            - replace
+        path:
+          type: string
+          pattern: ^/
         value: {}
     AuditEvent:
       type: object
-      required: [id, entityType, entityId, action, actorUserId, occurredAt, changes]
+      required:
+        - id
+        - entityType
+        - entityId
+        - action
+        - actorUserId
+        - occurredAt
+        - changes
+        - actorDisplayName
+        - actorNamePreserved
+        - metadata
       properties:
-        id: { $ref: "#/components/schemas/Uuid" }
-        entityType: { type: string }
-        entityId: { $ref: "#/components/schemas/Uuid" }
-        action: { type: string }
-        actorUserId: { $ref: "#/components/schemas/Uuid" }
-        occurredAt: { type: string, format: date-time }
-        reason: { type: [string, "null"] }
-        changes: { type: array, items: { $ref: "#/components/schemas/JsonPatchOperation" } }
-
+        id:
+          $ref: "#/components/schemas/Uuid"
+        entityType:
+          type: string
+        entityId:
+          $ref: "#/components/schemas/Uuid"
+        action:
+          type: string
+        actorUserId:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        occurredAt:
+          type: string
+          format: date-time
+        reason:
+          type:
+            - string
+            - "null"
+        changes:
+          type: array
+          items: {}
+        actorDisplayName:
+          type: string
+          maxLength: 200
+        actorNamePreserved:
+          type: boolean
+          description: false indica nome de cadastro atual ou sistema como fallback, sem snapshot histórico.
+        metadata:
+          type: object
+          additionalProperties: true
     ValidationError:
       type: object
-      required: [pointer, code, message]
+      required:
+        - pointer
+        - code
+        - message
       properties:
-        pointer: { type: string, example: /responses/3/result }
-        code: { type: string, example: REQUIRED }
-        message: { type: string, example: "Selecione C, NC ou NA." }
+        pointer:
+          type: string
+          example: /responses/3/result
+        code:
+          type: string
+          example: REQUIRED
+        message:
+          type: string
+          example: Selecione C, NC ou NA.
     Problem:
       type: object
       additionalProperties: true
-      required: [type, title, status, code, detail, traceId]
+      required:
+        - type
+        - title
+        - status
+        - code
+        - detail
+        - traceId
       properties:
-        type: { type: string, format: uri }
-        title: { type: string }
-        status: { type: integer, minimum: 400, maximum: 599 }
-        code: { type: string }
-        detail: { type: string }
-        traceId: { type: string }
-        errors: { type: array, items: { $ref: "#/components/schemas/ValidationError" } }
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        code:
+          type: string
+        detail:
+          type: string
+        traceId:
+          type: string
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidationError"
+    EmployeeNumber:
+      type: string
+      minLength: 1
+      maxLength: 50
+      pattern: ^[A-Za-z0-9][A-Za-z0-9._/-]*$
+      example: "001234"
+      description: >-
+        Matrícula em texto; espaços externos são removidos e letras normalizadas para maiúsculas.
+        Preserva zeros iniciais. Única no banco.
+    ManagedUser:
+      type: object
+      required:
+        - id
+        - displayName
+        - employeeNumber
+        - roles
+        - active
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        displayName:
+          type: string
+          maxLength: 200
+        employeeNumber:
+          oneOf:
+            - $ref: "#/components/schemas/EmployeeNumber"
+            - type: "null"
+        roles:
+          type: array
+          items:
+            type: string
+            enum:
+              - ORG_ADMIN
+              - TEMPLATE_MANAGER
+              - FLEET_MANAGER
+              - SUPERVISOR
+              - INSPECTOR
+              - AUDITOR
+        active:
+          type: boolean
+    CreateUserRequest:
+      type: object
+      required:
+        - displayName
+        - employeeNumber
+        - roles
+        - password
+      properties:
+        displayName:
+          type: string
+          minLength: 2
+          maxLength: 200
+        employeeNumber:
+          $ref: "#/components/schemas/EmployeeNumber"
+        roles:
+          type: array
+          minItems: 1
+          maxItems: 6
+          items:
+            type: string
+            enum:
+              - ORG_ADMIN
+              - TEMPLATE_MANAGER
+              - FLEET_MANAGER
+              - SUPERVISOR
+              - INSPECTOR
+              - AUDITOR
+        password:
+          type: string
+          format: password
+          minLength: 10
+          maxLength: 72
+          description: De 10 caracteres a 72 bytes UTF-8; o limite em bytes também é validado no servidor.
+    UpdateUserRequest:
+      type: object
+      required:
+        - displayName
+        - employeeNumber
+        - roles
+        - active
+      properties:
+        displayName:
+          type: string
+          minLength: 2
+          maxLength: 200
+        employeeNumber:
+          $ref: "#/components/schemas/EmployeeNumber"
+        roles:
+          type: array
+          minItems: 1
+          maxItems: 6
+          items:
+            type: string
+            enum:
+              - ORG_ADMIN
+              - TEMPLATE_MANAGER
+              - FLEET_MANAGER
+              - SUPERVISOR
+              - INSPECTOR
+              - AUDITOR
+        password:
+          type: string
+          format: password
+          minLength: 10
+          maxLength: 72
+          description: De 10 caracteres a 72 bytes UTF-8; o limite em bytes também é validado no servidor.
+        active:
+          type: boolean
+      description: >-
+        PATCH exige nome, matrícula, perfis e situação. Omita password para manter a senha; não
+        envie string vazia. Não permite autodesativação nem remoção do último administrador ativo.
+    MobileTokenResponse:
+      type: object
+      required:
+        - accessToken
+        - accessTokenExpiresAt
+        - refreshToken
+        - refreshTokenExpiresAt
+        - user
+      properties:
+        accessToken:
+          type: string
+        accessTokenExpiresAt:
+          type: string
+          format: date-time
+        refreshToken:
+          type: string
+        refreshTokenExpiresAt:
+          type: string
+          format: date-time
+        user:
+          type: object
+          required:
+            - id
+            - email
+            - employeeNumber
+            - displayName
+            - roles
+          properties:
+            id:
+              $ref: "#/components/schemas/Uuid"
+            email:
+              type:
+                - string
+                - "null"
+              maxLength: 320
+            employeeNumber:
+              oneOf:
+                - $ref: "#/components/schemas/EmployeeNumber"
+                - type: "null"
+            displayName:
+              type: string
+              maxLength: 200
+            roles:
+              type: array
+              items:
+                type: string
+                enum:
+                  - ORG_ADMIN
+                  - TEMPLATE_MANAGER
+                  - FLEET_MANAGER
+                  - SUPERVISOR
+                  - INSPECTOR
+                  - AUDITOR
+    CreateCompanyRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        document:
+          type:
+            - string
+            - "null"
+          maxLength: 30
+    Company:
+      type: object
+      required:
+        - id
+        - name
+        - active
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        document:
+          type:
+            - string
+            - "null"
+          maxLength: 30
+        active:
+          type: boolean
+    CreateSiteRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        companyId:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+    Site:
+      type: object
+      required:
+        - id
+        - name
+        - active
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        companyId:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        active:
+          type: boolean
+    CreatePersonRequest:
+      type: object
+      required:
+        - name
+        - kind
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        kind:
+          type: string
+          enum:
+            - DRIVER
+            - OPERATOR
+            - SUPERVISOR
+        driverLicenseNumber:
+          type:
+            - string
+            - "null"
+          maxLength: 30
+        driverLicenseExpiryDate:
+          type:
+            - string
+            - "null"
+          format: date
+        moppExpiryDate:
+          type:
+            - string
+            - "null"
+          format: date
+        passengerCourseExpiryDate:
+          type:
+            - string
+            - "null"
+          format: date
+    Person:
+      type: object
+      required:
+        - id
+        - name
+        - kind
+        - active
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        kind:
+          type: string
+          enum:
+            - DRIVER
+            - OPERATOR
+            - SUPERVISOR
+        driverLicenseNumber:
+          type:
+            - string
+            - "null"
+          maxLength: 30
+        driverLicenseExpiryDate:
+          type:
+            - string
+            - "null"
+          format: date
+        moppExpiryDate:
+          type:
+            - string
+            - "null"
+          format: date
+        passengerCourseExpiryDate:
+          type:
+            - string
+            - "null"
+          format: date
+        active:
+          type: boolean
+    CreateAssetRequest:
+      type: object
+      required:
+        - companyId
+        - kind
+        - code
+        - ownershipType
+      properties:
+        companyId:
+          $ref: "#/components/schemas/Uuid"
+        siteId:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        kind:
+          $ref: "#/components/schemas/AssetKind"
+        code:
+          type: string
+          minLength: 1
+          maxLength: 100
+        licensePlate:
+          type:
+            - string
+            - "null"
+          maxLength: 20
+        makeModel:
+          type:
+            - string
+            - "null"
+          maxLength: 200
+        manufacturer:
+          type:
+            - string
+            - "null"
+          maxLength: 200
+        manufactureYear:
+          type:
+            - integer
+            - "null"
+          minimum: 1900
+          maximum: 2200
+        predominantColor:
+          type:
+            - string
+            - "null"
+          maxLength: 80
+        ownershipType:
+          $ref: "#/components/schemas/OwnershipType"
+      description: >-
+        Para VEHICLE, makeModel é obrigatório. O local deve ser compartilhado ou pertencer à empresa
+        selecionada.
+    AssetListEntry:
+      type: object
+      required:
+        - asset
+        - siteName
+        - companyName
+      properties:
+        asset:
+          $ref: "#/components/schemas/Asset"
+        siteName:
+          type:
+            - string
+            - "null"
+          maxLength: 200
+        companyName:
+          type: string
+          maxLength: 200
+    InspectionAttachment:
+      type: object
+      required:
+        - id
+        - mediaType
+        - fileName
+        - contentBase64
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        mediaType:
+          type: string
+          enum:
+            - image/jpeg
+            - image/png
+        fileName:
+          type: string
+          minLength: 1
+          maxLength: 255
+        contentBase64:
+          type: string
+          minLength: 1
+          maxLength: 3500000
+          pattern: ^[A-Za-z0-9+/]+={0,2}$
+    InspectionRevisionHistory:
+      type: object
+      required:
+        - revision
+        - status
+        - authoredAt
+        - authoredDisplayName
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+        status:
+          $ref: "#/components/schemas/LifecycleStatus"
+        reason:
+          type:
+            - string
+            - "null"
+          maxLength: 1000
+        authoredBy:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        authoredDisplayName:
+          type: string
+          maxLength: 200
+        authoredAt:
+          type: string
+          format: date-time
+    InspectionMutationResult:
+      allOf:
+        - $ref: "#/components/schemas/InspectionSummary"
+        - type: object
+          required:
+            - weeklyChecklistId
+            - clientInspectionId
+          properties:
+            weeklyChecklistId:
+              $ref: "#/components/schemas/Uuid"
+            clientInspectionId:
+              $ref: "#/components/schemas/Uuid"
+            conflictId:
+              $ref: "#/components/schemas/Uuid"
+    TemplateItemInput:
+      type: object
+      required:
+        - text
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        sourcePrintedNumber:
+          type:
+            - string
+            - "null"
+          maxLength: 20
+        text:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        requiredOnComplete:
+          type: boolean
+          default: true
+        requireObservationWhenNc:
+          type: boolean
+          default: false
+        requirePhotoWhenNc:
+          type: boolean
+          default: false
+    TemplateSectionInput:
+      type: object
+      required:
+        - title
+        - items
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        title:
+          type: string
+          minLength: 1
+          maxLength: 300
+        items:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items:
+            $ref: "#/components/schemas/TemplateItemInput"
+    WeeklyChecklistListEntry:
+      type: object
+      required:
+        - id
+        - weekStartDate
+        - createdAt
+        - timezone
+        - versionId
+        - revision
+        - assetId
+        - assetCode
+        - vehicleMakeModel
+        - templateId
+        - templateName
+        - siteName
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        weekStartDate:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+        timezone:
+          type: string
+        versionId:
+          $ref: "#/components/schemas/Uuid"
+        revision:
+          type: integer
+          minimum: 1
+        assetId:
+          $ref: "#/components/schemas/Uuid"
+        assetCode:
+          type: string
+        vehicleMakeModel:
+          type:
+            - string
+            - "null"
+        templateId:
+          $ref: "#/components/schemas/Uuid"
+        templateName:
+          type:
+            - string
+            - "null"
+        siteName:
+          type:
+            - string
+            - "null"

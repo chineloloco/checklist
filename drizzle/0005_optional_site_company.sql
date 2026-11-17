@@ -1,0 +1,1 @@
+ALTER TABLE "sites" ALTER COLUMN "company_id" DROP NOT NULL;

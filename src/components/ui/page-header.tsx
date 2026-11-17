@@ -1,5 +1,15 @@
 import type { ReactNode } from "react";
-export function PageHeader({ kicker, title, description, actions }: { kicker: string; title: string; description?: string; actions?: ReactNode }) {
+export function PageHeader({
+  kicker,
+  title,
+  description,
+  actions,
+}: {
+  kicker: string;
+  title: string;
+  description?: string;
+  actions?: ReactNode;
+}) {
   return (
     <header className="page-header">
       <div>

@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/errors/app_failure.dart';
 import '../../checklists/data/local/app_database.dart';
+import '../../checklists/data/local/pending_registry.dart';
 import '../../checklists/data/remote/checklist_api.dart';
 import '../../checklists/domain/checklist_repository.dart';
 import '../data/device_identity.dart';
@@ -86,8 +87,22 @@ final class SyncCoordinator {
 
     try {
       await _requeueFailedOperations();
-      await _pushPending();
+      await _pushPending(<String>{});
       await _pullChanges();
+      final failed =
+          await (_db.select(_db.syncOutboxOperations)
+                ..where((table) => table.state.equals('FAILED'))
+                ..limit(1))
+              .getSingleOrNull();
+      if (failed != null) {
+        snapshot.value = SyncSnapshot(
+          state: SyncRunState.failed,
+          pendingCount: await _pendingCount(),
+          lastSyncedAt: await _lastSyncAt(),
+          message: failed.lastError ?? 'O servidor recusou uma operação.',
+        );
+        return;
+      }
       final now = DateTime.now().toUtc();
       await _putMetadata('last_sync_at', now.toIso8601String());
       snapshot.value = SyncSnapshot(
@@ -134,19 +149,35 @@ final class SyncCoordinator {
     );
   }
 
-  Future<void> _pushPending() async {
+  Future<void> _pushPending(Set<String> recoveredInspections) async {
     final queuedRows =
         await (_db.select(_db.syncOutboxOperations)
               ..where((table) => table.state.equals('QUEUED'))
               ..orderBy([(table) => OrderingTerm.asc(table.clientOccurredAt)]))
             .get();
-    final weeklyRows = queuedRows
-        .where((row) => row.entityType == 'WEEKLY_CHECKLIST')
+    if (queuedRows.isEmpty) return;
+    const priority = {
+      'COMPANY': 0,
+      'SITE': 1,
+      'PERSON': 2,
+      'ASSET': 3,
+      'WEEKLY_CHECKLIST': 4,
+      'INSPECTION': 5,
+      'AUDIT_EVENT': 6,
+    };
+    final firstPriority = queuedRows
+        .map((row) => priority[row.entityType] ?? 6)
+        .reduce((a, b) => a < b ? a : b);
+    // Keep mutations of the same entity in order, including retries whose
+    // original payload must remain unchanged until acknowledged.
+    final selectedEntities = <String>{};
+    final rows = queuedRows
+        .where((row) => (priority[row.entityType] ?? 6) == firstPriority)
+        .where(
+          (row) => selectedEntities.add('${row.entityType}:${row.entityId}'),
+        )
         .take(100)
         .toList(growable: false);
-    final rows = weeklyRows.isNotEmpty
-        ? weeklyRows
-        : queuedRows.take(100).toList(growable: false);
     if (rows.isEmpty) return;
 
     await _db.transaction(() async {
@@ -176,8 +207,7 @@ final class SyncCoordinator {
             entityId: row.entityId,
             baseRevision: row.baseRevision,
             clientOccurredAt: row.clientOccurredAt,
-            payload: (jsonDecode(row.payloadJson) as Map)
-                .cast<String, Object?>(),
+            payload: await _pushPayload(row.entityType, row.payloadJson),
           ),
       ],
     );
@@ -198,6 +228,17 @@ final class SyncCoordinator {
           await (_db.delete(
             _db.syncOutboxOperations,
           )..where((table) => table.operationId.equals(row.operationId))).go();
+          if (row.entityType == 'INSPECTION' && revision != null) {
+            await (_db.update(_db.syncOutboxOperations)..where(
+                  (table) =>
+                      table.entityType.equals('INSPECTION') &
+                      table.entityId.equals(row.entityId) &
+                      table.attemptCount.equals(0),
+                ))
+                .write(
+                  SyncOutboxOperationsCompanion(baseRevision: Value(revision)),
+                );
+          }
           await _writeEntityApplied(
             row.entityType,
             row.entityId,
@@ -221,7 +262,10 @@ final class SyncCoordinator {
             detail.toLowerCase().contains('checklist semanal') &&
             detail.toLowerCase().contains('encontrado');
         if (missingWeeklyChecklist &&
-            await _recoverMissingWeeklyChecklist(row.entityId)) {
+            await _recoverMissingWeeklyChecklist(
+              row.entityId,
+              recoveredInspections,
+            )) {
           await (_db.update(
             _db.syncOutboxOperations,
           )..where((table) => table.operationId.equals(row.operationId))).write(
@@ -270,11 +314,44 @@ final class SyncCoordinator {
     });
 
     if (shouldContinue && acknowledged.length == rows.length) {
-      await _pushPending();
+      await _pushPending(recoveredInspections);
     }
   }
 
-  Future<bool> _recoverMissingWeeklyChecklist(String inspectionId) async {
+  Future<Map<String, Object?>> _pushPayload(
+    String entityType,
+    String payloadJson,
+  ) async {
+    final payload = (jsonDecode(payloadJson) as Map).cast<String, Object?>();
+    if (entityType == 'WEEKLY_CHECKLIST') {
+      final localId = payload['clientWeeklyChecklistId']?.toString();
+      if (localId != null) {
+        final week = await (_db.select(
+          _db.localWeeklyChecklists,
+        )..where((table) => table.id.equals(localId))).getSingleOrNull();
+        if (week != null) {
+          payload['templateVersionId'] = week.templateVersionId;
+          payload['operationConfigId'] = week.operationConfigId;
+        }
+      }
+      return payload;
+    }
+    if (entityType != 'INSPECTION') return payload;
+    final weeklyId = payload['weeklyChecklistId']?.toString();
+    if (weeklyId == null) return payload;
+    final week = await (_db.select(
+      _db.localWeeklyChecklists,
+    )..where((table) => table.id.equals(weeklyId))).getSingleOrNull();
+    if (week?.serverId != null) {
+      payload['weeklyChecklistId'] = week!.serverId;
+    }
+    return payload;
+  }
+
+  Future<bool> _recoverMissingWeeklyChecklist(
+    String inspectionId,
+    Set<String> recoveredInspections,
+  ) async {
     final inspection = await (_db.select(
       _db.localInspections,
     )..where((table) => table.id.equals(inspectionId))).getSingleOrNull();
@@ -284,10 +361,13 @@ final class SyncCoordinator {
               ..where((table) => table.id.equals(inspection.weeklyChecklistId)))
             .getSingleOrNull();
     if (week == null) return false;
+    // A persistent rejection must reach the user instead of restarting push.
+    if (!recoveredInspections.add(inspectionId)) return false;
     final payload = jsonEncode({
       'clientWeeklyChecklistId': week.id,
       'assetId': week.assetId,
       'templateId': week.templateId,
+      'templateVersionId': week.templateVersionId,
       'localDate': week.weekStartDate,
     });
     final existing =
@@ -364,6 +444,9 @@ final class SyncCoordinator {
           'ASSET_TEMPLATE_ASSIGNMENT',
           'OPERATION_CONFIG',
           'ASSET',
+          'COMPANY',
+          'SITE',
+          'PERSON',
         }.contains(entry['entityType']?.toString()),
       );
       if (catalogChanged) {
@@ -432,6 +515,12 @@ final class SyncCoordinator {
               .getSingleOrNull();
       if (local != null) {
         if (local.syncState == 'CONFLICT') return;
+        final pending =
+            await (_db.select(_db.syncOutboxOperations)
+                  ..where((table) => table.entityId.equals(local.id))
+                  ..limit(1))
+                .getSingleOrNull();
+        if (pending != null) return;
         await (_db.update(
           _db.localInspections,
         )..where((table) => table.id.equals(local.id))).write(
@@ -467,6 +556,8 @@ final class SyncCoordinator {
     String serverId,
     int? revision,
   ) async {
+    if (registryEntityTypes.contains(entityType) || entityType == 'AUDIT_EVENT')
+      return;
     if (entityType == 'WEEKLY_CHECKLIST') {
       await (_db.update(
         _db.localWeeklyChecklists,
@@ -479,13 +570,18 @@ final class SyncCoordinator {
         ),
       );
     } else {
+      final pending =
+          await (_db.select(_db.syncOutboxOperations)
+                ..where((table) => table.entityId.equals(localId))
+                ..limit(1))
+              .getSingleOrNull();
       await (_db.update(
         _db.localInspections,
       )..where((table) => table.id.equals(localId))).write(
         LocalInspectionsCompanion(
           serverId: Value(serverId),
           revision: Value(revision),
-          syncState: const Value('SYNCED'),
+          syncState: Value(pending == null ? 'SYNCED' : 'QUEUED'),
           lastError: const Value(null),
           updatedAt: Value(DateTime.now().toUtc()),
         ),
@@ -493,8 +589,8 @@ final class SyncCoordinator {
       await (_db.update(
         _db.localAttachments,
       )..where((table) => table.inspectionId.equals(localId))).write(
-        const LocalAttachmentsCompanion(
-          syncState: Value('SYNCED'),
+        LocalAttachmentsCompanion(
+          syncState: Value(pending == null ? 'SYNCED' : 'QUEUED'),
           lastError: Value(null),
         ),
       );
@@ -506,6 +602,8 @@ final class SyncCoordinator {
     String entityId,
     String state,
   ) async {
+    if (registryEntityTypes.contains(entityType) || entityType == 'AUDIT_EVENT')
+      return;
     if (entityType == 'WEEKLY_CHECKLIST') {
       await (_db.update(_db.localWeeklyChecklists)
             ..where((table) => table.id.equals(entityId)))
@@ -524,6 +622,8 @@ final class SyncCoordinator {
     String detail,
     String? conflictId,
   ) async {
+    if (registryEntityTypes.contains(entityType) || entityType == 'AUDIT_EVENT')
+      return;
     if (entityType == 'WEEKLY_CHECKLIST') {
       await (_db.update(_db.localWeeklyChecklists)
             ..where((table) => table.id.equals(entityId)))

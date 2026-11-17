@@ -14,8 +14,8 @@ export async function GET(_request: Request, { params }: Params) {
         "Content-Type": attachment.mediaType,
         "Content-Length": String(bytes.byteLength),
         "Content-Disposition": `inline; filename*=UTF-8''${encodeURIComponent(attachment.fileName)}`,
-        "Cache-Control": "private, max-age=300"
-      }
+        "Cache-Control": "private, max-age=300",
+      },
     });
   });
 }

@@ -12,7 +12,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     const input = updateInspectionSchema.parse({
       ...(await request.json()),
       lifecycleStatus: "CORRECTED",
-      baseRevision: parseIfMatch(request)
+      baseRevision: parseIfMatch(request),
     });
     const inspection = await service.updateInspection(context, (await params).inspectionId, input);
     return json(inspection, { headers: { ETag: `"rev-${inspection.revision}"` } });

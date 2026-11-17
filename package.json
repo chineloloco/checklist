@@ -10,6 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "format": "prettier --write src scripts \"specs/**/*.ts\" \"*.{ts,mts,mjs}\" package.json tsconfig.json .prettierrc.json",
+    "format:check": "prettier --check src scripts \"specs/**/*.ts\" \"*.{ts,mts,mjs}\" package.json tsconfig.json .prettierrc.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -38,6 +40,7 @@
     "drizzle-kit": "latest",
     "eslint": "latest",
     "eslint-config-next": "16.4.6",
+    "prettier": "3.9.10",
     "tsx": "latest",
     "typescript": "latest",
     "vitest": "latest"

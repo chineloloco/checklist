@@ -26,14 +26,21 @@ class InspectionScreen extends StatefulWidget {
 }
 
 class _InspectionScreenState extends State<InspectionScreen> {
+  final _scrollController = ScrollController();
   bool _completing = false;
   bool _addingPhoto = false;
-  bool _deleting = false;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   Future<void> _saveAnswer(
     ChecklistItem item,
     InspectionResult? result, {
     String? observation,
+    bool advance = false,
   }) async {
     try {
       await widget.repository.saveAnswer(
@@ -42,6 +49,19 @@ class _InspectionScreenState extends State<InspectionScreen> {
         result: result,
         observation: observation ?? item.observation,
       );
+      if (mounted &&
+          advance &&
+          result != null &&
+          _scrollController.hasClients) {
+        await _scrollController.animateTo(
+          (_scrollController.offset + 160).clamp(
+            0.0,
+            _scrollController.position.maxScrollExtent,
+          ),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+        );
+      }
     } on AppFailure catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -243,43 +263,35 @@ class _InspectionScreenState extends State<InspectionScreen> {
     }
   }
 
-  Future<void> _deleteInspection(InspectionDraft draft) async {
+  Future<void> _deactivateInspection(InspectionDraft draft) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Excluir este formulário?'),
+        title: const Text('Desativar este formulário?'),
         content: const Text(
-          'As respostas e fotos salvas somente neste aparelho serão apagadas. '
-          'Esta ação não pode ser desfeita.',
+          'As respostas e fotos serão preservadas neste aparelho. O formulário deixará de ser enviado.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancelar'),
           ),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: FieldColors.nonCompliant,
-            ),
+          FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            icon: const Icon(Icons.delete_outline),
-            label: const Text('Excluir'),
+            child: const Text('Desativar'),
           ),
         ],
       ),
     );
-    if (confirmed != true) return;
-    setState(() => _deleting = true);
+    if (confirmed != true || !mounted) return;
     try {
-      await widget.repository.deleteUnsyncedInspection(draft.id);
-      if (!mounted) return;
-      Navigator.pop(context, true);
+      await widget.repository.deactivateUnsyncedInspection(draft.id);
+      if (mounted) Navigator.pop(context, true);
     } on AppFailure catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
-      setState(() => _deleting = false);
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 
@@ -360,6 +372,7 @@ class _InspectionScreenState extends State<InspectionScreen> {
                 ),
               ),
         body: ListView(
+          controller: _scrollController,
           padding: EdgeInsets.fromLTRB(16, 8, 16, readOnly ? 32 : 120),
           children: [
             _InspectionProgress(draft: draft),
@@ -396,18 +409,13 @@ class _InspectionScreenState extends State<InspectionScreen> {
             if (draft.canDeleteBeforeSync) ...[
               const SizedBox(height: 20),
               OutlinedButton.icon(
-                onPressed: _deleting ? null : () => _deleteInspection(draft),
+                onPressed: () => _deactivateInspection(draft),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: FieldColors.nonCompliant,
                   side: const BorderSide(color: FieldColors.nonCompliant),
                 ),
-                icon: _deleting
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.delete_outline),
-                label: const Text('Excluir formulário não enviado'),
+                icon: const Icon(Icons.power_settings_new),
+                label: const Text('Desativar formulário não enviado'),
               ),
             ],
           ],
@@ -442,7 +450,7 @@ class _InspectionScreenState extends State<InspectionScreen> {
           _ItemCard(
             item: item,
             readOnly: readOnly,
-            onChanged: (result) => _saveAnswer(item, result),
+            onChanged: (result) => _saveAnswer(item, result, advance: true),
             onObservation: () => _editObservation(item),
           ),
           const SizedBox(height: 10),
@@ -818,15 +826,11 @@ class _ItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isNc = item.result == InspectionResult.nonCompliant;
     return Card(
-      color: isNc ? FieldColors.nonCompliantSoft : FieldColors.surface,
+      color: FieldColors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isNc ? FieldColors.nonCompliant : FieldColors.line,
-          width: isNc ? 1.5 : 1,
-        ),
+        side: const BorderSide(color: FieldColors.line),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -841,15 +845,13 @@ class _ItemCard extends StatelessWidget {
                   height: 32,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: isNc
-                        ? FieldColors.nonCompliant
-                        : FieldColors.steelSoft,
+                    color: FieldColors.steelSoft,
                     borderRadius: BorderRadius.circular(9),
                   ),
                   child: Text(
                     item.sourcePrintedNumber ?? '${item.order + 1}',
                     style: TextStyle(
-                      color: isNc ? Colors.white : FieldColors.steel,
+                      color: FieldColors.steel,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -863,26 +865,6 @@ class _ItemCard extends StatelessWidget {
                         item.text,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      if (isNc) ...[
-                        const SizedBox(height: 5),
-                        const Row(
-                          children: [
-                            Icon(
-                              Icons.warning_amber,
-                              size: 17,
-                              color: FieldColors.nonCompliant,
-                            ),
-                            SizedBox(width: 5),
-                            Text(
-                              'NC · Não conforme',
-                              style: TextStyle(
-                                color: FieldColors.nonCompliant,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
                     ],
                   ),
                 ),

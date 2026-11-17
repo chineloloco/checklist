@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { compare } from "bcryptjs";
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull, sql } from "drizzle-orm";
+import { employeeNumberSchema } from "@/features/auth/domain/employee-number";
 import { getDb } from "@/infrastructure/db/client";
 import { mobileAuthSessions, users } from "@/infrastructure/db/schema";
 import type { Role } from "@/features/auth/domain/permissions";
@@ -16,16 +17,17 @@ const VALID_ROLES = new Set<Role>([
   "FLEET_MANAGER",
   "SUPERVISOR",
   "INSPECTOR",
-  "AUDITOR"
+  "AUDITOR",
 ]);
 
-// Cost-equivalent fallback prevents a missing e-mail from becoming an account oracle.
+// Cost-equivalent fallback prevents a missing employee number from becoming an account oracle.
 const DUMMY_PASSWORD_HASH = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6Ttxp8D7HMXQ8g5xq5F2gWf6zYp6u";
 
 type MobileUser = {
   id: string;
   organizationId: string;
-  email: string;
+  email: string | null;
+  employeeNumber: string | null;
   displayName: string;
   roles: Role[];
 };
@@ -33,7 +35,8 @@ type MobileUser = {
 export type MobileAccessClaims = {
   sub: string;
   organizationId: string;
-  email: string;
+  email: string | null;
+  employeeNumber: string | null;
   displayName: string;
   roles: Role[];
   sessionId: string;
@@ -46,14 +49,15 @@ export type MobileTokenResponse = {
   refreshTokenExpiresAt: string;
   user: {
     id: string;
-    email: string;
+    email: string | null;
+    employeeNumber: string | null;
     displayName: string;
     roles: Role[];
   };
 };
 
 function invalidCredentials(): DomainError {
-  return new DomainError("INVALID_CREDENTIALS", "E-mail ou senha inválidos.", 401);
+  return new DomainError("INVALID_CREDENTIALS", "Matrícula ou senha inválidas.", 401);
 }
 
 function invalidRefreshToken(): DomainError {
@@ -63,7 +67,9 @@ function invalidRefreshToken(): DomainError {
 function signingSecret(): string {
   const secret = process.env.MOBILE_AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
   if (!secret || secret.length < 32) {
-    throw new Error("Configure MOBILE_AUTH_SECRET (ou NEXTAUTH_SECRET) com pelo menos 32 caracteres.");
+    throw new Error(
+      "Configure MOBILE_AUTH_SECRET (ou NEXTAUTH_SECRET) com pelo menos 32 caracteres.",
+    );
   }
   return secret;
 }
@@ -90,21 +96,29 @@ function signAccessToken(user: MobileUser, sessionId: string, now = new Date()) 
     sub: user.id,
     organizationId: user.organizationId,
     email: user.email,
+    employeeNumber: user.employeeNumber,
     displayName: user.displayName,
     roles: user.roles,
     sid: sessionId,
     iat: issuedAt,
     exp: expiresAt,
-    jti: randomUUID()
+    jti: randomUUID(),
   });
-  const signature = createHmac("sha256", signingSecret()).update(`${header}.${payload}`).digest("base64url");
+  const signature = createHmac("sha256", signingSecret())
+    .update(`${header}.${payload}`)
+    .digest("base64url");
   return {
     token: `${header}.${payload}.${signature}`,
-    expiresAt: new Date(expiresAt * 1000)
+    expiresAt: new Date(expiresAt * 1000),
   };
 }
 
-function responseFor(user: MobileUser, sessionId: string, refreshToken: string, refreshExpiresAt: Date): MobileTokenResponse {
+function responseFor(
+  user: MobileUser,
+  sessionId: string,
+  refreshToken: string,
+  refreshExpiresAt: Date,
+): MobileTokenResponse {
   const access = signAccessToken(user, sessionId);
   return {
     accessToken: access.token,
@@ -114,9 +128,10 @@ function responseFor(user: MobileUser, sessionId: string, refreshToken: string, 
     user: {
       id: user.id,
       email: user.email,
+      employeeNumber: user.employeeNumber,
       displayName: user.displayName,
-      roles: user.roles
-    }
+      roles: user.roles,
+    },
   };
 }
 
@@ -132,9 +147,17 @@ export function verifyMobileAccessToken(token: string, now = new Date()): Mobile
     throw new Error("Token inválido.");
   }
 
-  const header = JSON.parse(Buffer.from(encodedHeader, "base64url").toString("utf8")) as Record<string, unknown>;
-  const payload = JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8")) as Record<string, unknown>;
-  const roles = Array.isArray(payload.roles) ? payload.roles.filter((role): role is Role => VALID_ROLES.has(role as Role)) : [];
+  const header = JSON.parse(Buffer.from(encodedHeader, "base64url").toString("utf8")) as Record<
+    string,
+    unknown
+  >;
+  const payload = JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8")) as Record<
+    string,
+    unknown
+  >;
+  const roles = Array.isArray(payload.roles)
+    ? payload.roles.filter((role): role is Role => VALID_ROLES.has(role as Role))
+    : [];
   const nowSeconds = Math.floor(now.getTime() / 1000);
   if (
     header.alg !== "HS256" ||
@@ -144,7 +167,6 @@ export function verifyMobileAccessToken(token: string, now = new Date()): Mobile
     payload.exp <= nowSeconds ||
     typeof payload.sub !== "string" ||
     typeof payload.organizationId !== "string" ||
-    typeof payload.email !== "string" ||
     typeof payload.displayName !== "string" ||
     typeof payload.sid !== "string" ||
     roles.length === 0
@@ -154,26 +176,34 @@ export function verifyMobileAccessToken(token: string, now = new Date()): Mobile
   return {
     sub: payload.sub,
     organizationId: payload.organizationId,
-    email: payload.email,
+    email: typeof payload.email === "string" ? payload.email : null,
+    employeeNumber: typeof payload.employeeNumber === "string" ? payload.employeeNumber : null,
     displayName: payload.displayName,
     roles,
-    sessionId: payload.sid
+    sessionId: payload.sid,
   };
 }
 
 export async function loginWithPassword(input: {
-  email: string;
+  employeeNumber: string;
   password: string;
   deviceId?: string;
 }): Promise<MobileTokenResponse> {
   if (process.env.AUTH_ALLOW_CREDENTIALS !== "true") {
-    throw new DomainError("PASSWORD_AUTH_DISABLED", "O acesso por usuário e senha está desativado.", 503);
+    throw new DomainError(
+      "PASSWORD_AUTH_DISABLED",
+      "O acesso por usuário e senha está desativado.",
+      503,
+    );
   }
   const database = getDb();
+  const employeeNumber = employeeNumberSchema.parse(input.employeeNumber);
   const matches = await database
     .select()
     .from(users)
-    .where(and(eq(users.email, input.email.trim().toLowerCase()), eq(users.active, true)))
+    .where(
+      and(sql`upper(trim(${users.employeeNumber})) = ${employeeNumber}`, eq(users.active, true)),
+    )
     .limit(2);
   const user = matches.length === 1 ? matches[0] : null;
   const passwordMatches = await compare(input.password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
@@ -189,20 +219,26 @@ export async function loginWithPassword(input: {
       organizationId: user.organizationId,
       refreshTokenHash: tokenHash(refreshToken),
       deviceId: input.deviceId,
-      expiresAt: refreshExpiresAt
+      expiresAt: refreshExpiresAt,
     })
     .returning({ id: mobileAuthSessions.id });
-  await database.update(users).set({ lastLoginAt: new Date(), updatedAt: new Date() }).where(eq(users.id, user.id));
+  await database
+    .update(users)
+    .set({ lastLoginAt: new Date(), updatedAt: new Date() })
+    .where(eq(users.id, user.id));
 
   return responseFor(
     { ...user, roles: user.roles as Role[] },
     session.id,
     refreshToken,
-    refreshExpiresAt
+    refreshExpiresAt,
   );
 }
 
-export async function rotateRefreshToken(refreshToken: string, deviceId?: string): Promise<MobileTokenResponse> {
+export async function rotateRefreshToken(
+  refreshToken: string,
+  deviceId?: string,
+): Promise<MobileTokenResponse> {
   const database = getDb();
   const hash = tokenHash(refreshToken);
   const outcome = await database.transaction(async (transaction) => {
@@ -218,14 +254,24 @@ export async function rotateRefreshToken(refreshToken: string, deviceId?: string
       await transaction
         .update(mobileAuthSessions)
         .set({ revokedAt: new Date() })
-        .where(and(eq(mobileAuthSessions.familyId, match.session.familyId), isNull(mobileAuthSessions.revokedAt)));
+        .where(
+          and(
+            eq(mobileAuthSessions.familyId, match.session.familyId),
+            isNull(mobileAuthSessions.revokedAt),
+          ),
+        );
       return null;
     }
     if (!match.user.active || match.session.expiresAt <= new Date()) {
       await transaction
         .update(mobileAuthSessions)
         .set({ revokedAt: new Date() })
-        .where(and(eq(mobileAuthSessions.familyId, match.session.familyId), isNull(mobileAuthSessions.revokedAt)));
+        .where(
+          and(
+            eq(mobileAuthSessions.familyId, match.session.familyId),
+            isNull(mobileAuthSessions.revokedAt),
+          ),
+        );
       return null;
     }
 
@@ -237,15 +283,20 @@ export async function rotateRefreshToken(refreshToken: string, deviceId?: string
         and(
           eq(mobileAuthSessions.id, match.session.id),
           isNull(mobileAuthSessions.revokedAt),
-          gt(mobileAuthSessions.expiresAt, new Date())
-        )
+          gt(mobileAuthSessions.expiresAt, new Date()),
+        ),
       )
       .returning({ id: mobileAuthSessions.id });
     if (claimed.length === 0) {
       await transaction
         .update(mobileAuthSessions)
         .set({ revokedAt: new Date() })
-        .where(and(eq(mobileAuthSessions.familyId, match.session.familyId), isNull(mobileAuthSessions.revokedAt)));
+        .where(
+          and(
+            eq(mobileAuthSessions.familyId, match.session.familyId),
+            isNull(mobileAuthSessions.revokedAt),
+          ),
+        );
       return null;
     }
 
@@ -260,7 +311,7 @@ export async function rotateRefreshToken(refreshToken: string, deviceId?: string
         organizationId: match.user.organizationId,
         refreshTokenHash: tokenHash(nextToken),
         deviceId: deviceId ?? match.session.deviceId ?? undefined,
-        expiresAt: nextExpiresAt
+        expiresAt: nextExpiresAt,
       })
       .returning({ id: mobileAuthSessions.id });
     await transaction
@@ -272,17 +323,27 @@ export async function rotateRefreshToken(refreshToken: string, deviceId?: string
       user: { ...match.user, roles: match.user.roles as Role[] },
       sessionId: nextSession.id,
       refreshToken: nextToken,
-      refreshExpiresAt: nextExpiresAt
+      refreshExpiresAt: nextExpiresAt,
     };
   });
 
   if (!outcome) throw invalidRefreshToken();
-  return responseFor(outcome.user, outcome.sessionId, outcome.refreshToken, outcome.refreshExpiresAt);
+  return responseFor(
+    outcome.user,
+    outcome.sessionId,
+    outcome.refreshToken,
+    outcome.refreshExpiresAt,
+  );
 }
 
 export async function revokeRefreshToken(refreshToken: string): Promise<void> {
   await getDb()
     .update(mobileAuthSessions)
     .set({ revokedAt: new Date() })
-    .where(and(eq(mobileAuthSessions.refreshTokenHash, tokenHash(refreshToken)), isNull(mobileAuthSessions.revokedAt)));
+    .where(
+      and(
+        eq(mobileAuthSessions.refreshTokenHash, tokenHash(refreshToken)),
+        isNull(mobileAuthSessions.revokedAt),
+      ),
+    );
 }

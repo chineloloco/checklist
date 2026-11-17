@@ -16,7 +16,7 @@ final class AuthenticationFailure extends AppFailure {
 
 final class SessionExpiredFailure extends AppFailure {
   const SessionExpiredFailure()
-      : super('Sua sessão expirou. Entre novamente para sincronizar.');
+    : super('Sua sessão expirou. Entre novamente para sincronizar.');
 }
 
 final class NetworkFailure extends AppFailure {
@@ -25,7 +25,7 @@ final class NetworkFailure extends AppFailure {
 
 final class CursorExpiredFailure extends AppFailure {
   const CursorExpiredFailure()
-      : super('O cursor expirou; é necessário baixar um novo manifesto.');
+    : super('O cursor expirou; é necessário baixar um novo manifesto.');
 }
 
 final class ValidationFailure extends AppFailure {

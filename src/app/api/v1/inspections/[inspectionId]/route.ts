@@ -15,7 +15,10 @@ export async function GET(_request: Request, { params }: Params) {
 
 export async function PATCH(request: NextRequest, { params }: Params) {
   return apiHandler("inspections:write", async (context) => {
-    const input = updateInspectionSchema.parse({ ...(await request.json()), baseRevision: parseIfMatch(request) });
+    const input = updateInspectionSchema.parse({
+      ...(await request.json()),
+      baseRevision: parseIfMatch(request),
+    });
     const inspection = await service.updateInspection(context, (await params).inspectionId, input);
     return json(inspection, { headers: { ETag: `"rev-${inspection.revision}"` } });
   });

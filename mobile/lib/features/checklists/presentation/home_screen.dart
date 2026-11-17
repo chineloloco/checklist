@@ -5,6 +5,7 @@ import '../../../app/app_dependencies.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/state_badge.dart';
+import '../../../core/widgets/keyboard_aware_sheet.dart';
 import '../../sync/presentation/sync_banner.dart';
 import '../domain/checklist_models.dart';
 import 'asset_display.dart';
@@ -179,17 +180,6 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       if (asset == null || !mounted) return;
       setState(() => _creatingChecklist = true);
-      final assigned = await widget.dependencies.checklistRepository
-          .listTemplateChoices(asset.id);
-      if (!assigned.any(
-        (choice) => choice.templateId == selectedTemplate.templateId,
-      )) {
-        await widget.dependencies.registryApi.assignTemplate(
-          assetId: asset.id,
-          template: selectedTemplate,
-        );
-        await widget.dependencies.syncCoordinator.bootstrap();
-      }
       final weekId = await widget.dependencies.checklistService.openWeek(
         asset: asset,
         template: selectedTemplate,
@@ -586,7 +576,7 @@ class _AssetPicker extends StatelessWidget {
   final List<AssetSummary> assets;
 
   @override
-  Widget build(BuildContext context) => SafeArea(
+  Widget build(BuildContext context) => KeyboardAwareSheet(
     child: Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       child: Column(
@@ -600,9 +590,10 @@ class _AssetPicker extends StatelessWidget {
           const SizedBox(height: 6),
           const Text('Veículos e equipamentos autorizados para este aparelho.'),
           const SizedBox(height: 16),
-          Flexible(
+          SizedBox(
             child: ListView.separated(
               shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
               itemCount: assets.length,
               separatorBuilder: (_, __) => const Divider(height: 1),
               itemBuilder: (context, index) {
@@ -637,7 +628,7 @@ class _TemplatePicker extends StatelessWidget {
   final List<TemplateChoice> choices;
 
   @override
-  Widget build(BuildContext context) => SafeArea(
+  Widget build(BuildContext context) => KeyboardAwareSheet(
     child: Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       child: Column(
@@ -692,13 +683,11 @@ class _AssetPickerWithCreateState extends State<_AssetPickerWithCreate> {
     final filteredAssets = filterAssets(widget.assets, _searchController.text);
     final isVehicle = widget.template.assetKind == 'VEHICLE';
 
-    return SafeArea(
+    return KeyboardAwareSheet(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(context).height * .72,
-          ),
+          constraints: BoxConstraints(maxHeight: double.infinity),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -781,9 +770,10 @@ class _AssetPickerWithCreateState extends State<_AssetPickerWithCreate> {
                   ),
                 )
               else
-                Flexible(
+                SizedBox(
                   child: ListView.separated(
                     shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
                     itemCount: filteredAssets.length,
                     separatorBuilder: (_, __) => const Divider(height: 1),
                     itemBuilder: (context, index) {
@@ -824,13 +814,11 @@ class _AllTemplatePicker extends StatelessWidget {
   final List<TemplateChoice> choices;
 
   @override
-  Widget build(BuildContext context) => SafeArea(
+  Widget build(BuildContext context) => KeyboardAwareSheet(
     child: Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * .72,
-        ),
+        constraints: BoxConstraints(maxHeight: double.infinity),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -842,9 +830,10 @@ class _AllTemplatePicker extends StatelessWidget {
             const SizedBox(height: 6),
             const Text('Todos os modelos publicados e ativos.'),
             const SizedBox(height: 12),
-            Flexible(
+            SizedBox(
               child: ListView.separated(
                 shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
                 itemCount: choices.length,
                 separatorBuilder: (_, __) => const Divider(height: 1),
                 itemBuilder: (context, index) {

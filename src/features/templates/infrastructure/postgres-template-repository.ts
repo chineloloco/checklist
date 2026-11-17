@@ -3,6 +3,7 @@ import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 import { getDb } from "@/infrastructure/db/client";
 import {
   auditEvents,
+  assetTemplateAssignments,
   checklistTemplates,
   operationConfigs,
   organizations,
@@ -10,15 +11,21 @@ import {
   templateItems,
   templateSections,
   templateVersions,
-  weeklyChecklists
+  weeklyChecklists,
 } from "@/infrastructure/db/schema";
 import { conflict, notFound, validationFailed } from "@/shared/domain/errors";
-import type { CreateTemplateInput, UpdateTemplateMetadataInput, UpdateTemplateVersionInput } from "@/features/templates/domain/template";
+import type {
+  CreateTemplateInput,
+  UpdateTemplateMetadataInput,
+  UpdateTemplateVersionInput,
+} from "@/features/templates/domain/template";
 
 type Context = { organizationId: string; userId: string };
 
 export class PostgresTemplateRepository {
-  private get database() { return getDb(); }
+  private get database() {
+    return getDb();
+  }
 
   async list(context: Context, status?: "DRAFT" | "ACTIVE" | "ARCHIVED") {
     const conditions = [eq(checklistTemplates.organizationId, context.organizationId)];
@@ -32,7 +39,7 @@ export class PostgresTemplateRepository {
         status: checklistTemplates.status,
         identificationStatus: checklistTemplates.identificationStatus,
         latestVersion: sql<number>`max(${templateVersions.versionNumber})`,
-        publishedVersions: sql<number>`count(*) filter (where ${templateVersions.status} = 'PUBLISHED')`
+        publishedVersions: sql<number>`count(*) filter (where ${templateVersions.status} = 'PUBLISHED')`,
       })
       .from(checklistTemplates)
       .leftJoin(templateVersions, eq(templateVersions.templateId, checklistTemplates.id))
@@ -45,7 +52,12 @@ export class PostgresTemplateRepository {
     const [template] = await this.database
       .select()
       .from(checklistTemplates)
-      .where(and(eq(checklistTemplates.id, templateId), eq(checklistTemplates.organizationId, context.organizationId)))
+      .where(
+        and(
+          eq(checklistTemplates.id, templateId),
+          eq(checklistTemplates.organizationId, context.organizationId),
+        ),
+      )
       .limit(1);
     if (!template) throw notFound("Modelo não encontrado.");
     const versions = await this.database
@@ -61,7 +73,12 @@ export class PostgresTemplateRepository {
       .select({ version: templateVersions, template: checklistTemplates })
       .from(templateVersions)
       .innerJoin(checklistTemplates, eq(checklistTemplates.id, templateVersions.templateId))
-      .where(and(eq(templateVersions.id, versionId), eq(templateVersions.organizationId, context.organizationId)))
+      .where(
+        and(
+          eq(templateVersions.id, versionId),
+          eq(templateVersions.organizationId, context.organizationId),
+        ),
+      )
       .limit(1);
     if (!version) throw notFound("Versão não encontrada.");
     const sections = await this.database
@@ -79,8 +96,8 @@ export class PostgresTemplateRepository {
       template: version.template,
       sections: sections.map((section) => ({
         ...section,
-        items: items.filter((item) => item.sectionId === section.id)
-      }))
+        items: items.filter((item) => item.sectionId === section.id),
+      })),
     };
   }
 
@@ -94,7 +111,7 @@ export class PostgresTemplateRepository {
           name: input.name,
           assetKind: input.assetKind,
           status: "DRAFT",
-          identificationStatus: input.name ? "CONFIRMED" : "PENDING_CONFIRMATION"
+          identificationStatus: input.name ? "CONFIRMED" : "PENDING_CONFIRMATION",
         })
         .returning();
       const [version] = await tx
@@ -104,7 +121,7 @@ export class PostgresTemplateRepository {
           templateId: template.id,
           versionNumber: 1,
           status: "DRAFT",
-          identificationFields: input.identificationFields
+          identificationFields: input.identificationFields,
         })
         .returning();
       await this.writeSections(tx, version.id, input.sections);
@@ -113,7 +130,7 @@ export class PostgresTemplateRepository {
         entityType: "TEMPLATE",
         entityId: template.id,
         action: "DRAFT_CREATED",
-        actorUserId: context.userId
+        actorUserId: context.userId,
       });
       return version.id;
     });
@@ -122,16 +139,26 @@ export class PostgresTemplateRepository {
 
   async updateDraft(context: Context, versionId: string, input: UpdateTemplateVersionInput) {
     await this.database.transaction(async (tx) => {
-      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`template-version:${versionId}`}))`);
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${`template-version:${versionId}`}))`,
+      );
       const [version] = await tx
         .select()
         .from(templateVersions)
-        .where(and(eq(templateVersions.id, versionId), eq(templateVersions.organizationId, context.organizationId)))
+        .where(
+          and(
+            eq(templateVersions.id, versionId),
+            eq(templateVersions.organizationId, context.organizationId),
+          ),
+        )
         .limit(1);
       if (!version) throw notFound("Versão não encontrada.");
-      if (version.status !== "DRAFT") throw conflict("VERSION_IMMUTABLE", "Versões publicadas não podem ser alteradas.");
+      if (version.status !== "DRAFT")
+        throw conflict("VERSION_IMMUTABLE", "Versões publicadas não podem ser alteradas.");
       if (version.revision !== input.baseRevision) {
-        throw conflict("REVISION_CONFLICT", "A versão foi alterada em outro lugar.", { currentRevision: version.revision });
+        throw conflict("REVISION_CONFLICT", "A versão foi alterada em outro lugar.", {
+          currentRevision: version.revision,
+        });
       }
 
       await tx.delete(templateItems).where(eq(templateItems.versionId, versionId));
@@ -139,7 +166,11 @@ export class PostgresTemplateRepository {
       await this.writeSections(tx, versionId, input.sections);
       await tx
         .update(templateVersions)
-        .set({ identificationFields: input.identificationFields, revision: version.revision + 1, updatedAt: new Date() })
+        .set({
+          identificationFields: input.identificationFields,
+          revision: version.revision + 1,
+          updatedAt: new Date(),
+        })
         .where(eq(templateVersions.id, versionId));
       await tx.insert(auditEvents).values({
         organizationId: context.organizationId,
@@ -147,7 +178,7 @@ export class PostgresTemplateRepository {
         entityId: versionId,
         action: "DRAFT_UPDATED",
         actorUserId: context.userId,
-        metadata: { revision: version.revision + 1 }
+        metadata: { revision: version.revision + 1 },
       });
     });
     return this.version(context, versionId);
@@ -158,10 +189,16 @@ export class PostgresTemplateRepository {
       const [template] = await tx
         .select()
         .from(checklistTemplates)
-        .where(and(eq(checklistTemplates.id, templateId), eq(checklistTemplates.organizationId, context.organizationId)))
+        .where(
+          and(
+            eq(checklistTemplates.id, templateId),
+            eq(checklistTemplates.organizationId, context.organizationId),
+          ),
+        )
         .limit(1);
       if (!template) throw notFound("Modelo não encontrado.");
-      if (template.status === "ARCHIVED") throw conflict("TEMPLATE_ARCHIVED", "Modelos arquivados não podem ser alterados.");
+      if (template.status === "ARCHIVED")
+        throw conflict("TEMPLATE_ARCHIVED", "Modelos arquivados não podem ser alterados.");
 
       const [updated] = await tx
         .update(checklistTemplates)
@@ -174,7 +211,7 @@ export class PostgresTemplateRepository {
         entityId: templateId,
         action: "IDENTIFICATION_CONFIRMED",
         actorUserId: context.userId,
-        metadata: { previousName: template.name, name: input.name }
+        metadata: { previousName: template.name, name: input.name },
       });
       return updated;
     });
@@ -189,17 +226,24 @@ export class PostgresTemplateRepository {
           and(
             eq(templateVersions.id, basedOnVersionId),
             eq(templateVersions.templateId, templateId),
-            eq(templateVersions.organizationId, context.organizationId)
-          )
+            eq(templateVersions.organizationId, context.organizationId),
+          ),
         )
         .limit(1);
       if (!base) throw notFound("Versão base não encontrada.");
       const [existingDraft] = await tx
         .select()
         .from(templateVersions)
-        .where(and(eq(templateVersions.templateId, templateId), eq(templateVersions.status, "DRAFT")))
+        .where(
+          and(eq(templateVersions.templateId, templateId), eq(templateVersions.status, "DRAFT")),
+        )
         .limit(1);
-      if (existingDraft) throw conflict("DRAFT_ALREADY_EXISTS", "Já existe uma versão em rascunho para este modelo.", { versionId: existingDraft.id });
+      if (existingDraft)
+        throw conflict(
+          "DRAFT_ALREADY_EXISTS",
+          "Já existe uma versão em rascunho para este modelo.",
+          { versionId: existingDraft.id },
+        );
       const [latest] = await tx
         .select({ versionNumber: sql<number>`max(${templateVersions.versionNumber})` })
         .from(templateVersions)
@@ -211,25 +255,53 @@ export class PostgresTemplateRepository {
           templateId,
           versionNumber: Number(latest.versionNumber ?? 0) + 1,
           status: "DRAFT",
-          identificationFields: base.identificationFields
+          identificationFields: base.identificationFields,
         })
         .returning();
-      const sections = await tx.select().from(templateSections).where(eq(templateSections.versionId, base.id)).orderBy(asc(templateSections.sortOrder));
-      const items = await tx.select().from(templateItems).where(eq(templateItems.versionId, base.id)).orderBy(asc(templateItems.sortOrder));
+      const sections = await tx
+        .select()
+        .from(templateSections)
+        .where(eq(templateSections.versionId, base.id))
+        .orderBy(asc(templateSections.sortOrder));
+      const items = await tx
+        .select()
+        .from(templateItems)
+        .where(eq(templateItems.versionId, base.id))
+        .orderBy(asc(templateItems.sortOrder));
       let order = 0;
       for (const section of sections) {
         const sectionId = randomUUID();
-        await tx.insert(templateSections).values({ id: sectionId, versionId: created.id, title: section.title, sortOrder: section.sortOrder });
+        await tx.insert(templateSections).values({
+          id: sectionId,
+          versionId: created.id,
+          title: section.title,
+          sortOrder: section.sortOrder,
+        });
         const sectionItems = items.filter((item) => item.sectionId === section.id);
         if (sectionItems.length) {
-          await tx.insert(templateItems).values(sectionItems.map((item) => ({
-            id: randomUUID(), sectionId, versionId: created.id, sourcePrintedNumber: item.sourcePrintedNumber,
-            originalText: item.originalText, sortOrder: order++, requiredOnComplete: item.requiredOnComplete,
-            requireObservationWhenNc: item.requireObservationWhenNc, requirePhotoWhenNc: item.requirePhotoWhenNc
-          })));
+          await tx.insert(templateItems).values(
+            sectionItems.map((item) => ({
+              id: randomUUID(),
+              sectionId,
+              versionId: created.id,
+              sourcePrintedNumber: item.sourcePrintedNumber,
+              originalText: item.originalText,
+              sortOrder: order++,
+              requiredOnComplete: item.requiredOnComplete,
+              requireObservationWhenNc: item.requireObservationWhenNc,
+              requirePhotoWhenNc: item.requirePhotoWhenNc,
+            })),
+          );
         }
       }
-      await tx.insert(auditEvents).values({ organizationId: context.organizationId, entityType: "TEMPLATE_VERSION", entityId: created.id, action: "DRAFT_CREATED", actorUserId: context.userId, metadata: { basedOnVersionId } });
+      await tx.insert(auditEvents).values({
+        organizationId: context.organizationId,
+        entityType: "TEMPLATE_VERSION",
+        entityId: created.id,
+        action: "DRAFT_CREATED",
+        actorUserId: context.userId,
+        metadata: { basedOnVersionId },
+      });
       return created.id;
     });
     return this.version(context, versionId);
@@ -237,17 +309,27 @@ export class PostgresTemplateRepository {
 
   async publish(context: Context, versionId: string, baseRevision: number) {
     return this.database.transaction(async (tx) => {
-      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`template-version:${versionId}`}))`);
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${`template-version:${versionId}`}))`,
+      );
       const [row] = await tx
         .select({ version: templateVersions, template: checklistTemplates })
         .from(templateVersions)
         .innerJoin(checklistTemplates, eq(checklistTemplates.id, templateVersions.templateId))
-        .where(and(eq(templateVersions.id, versionId), eq(templateVersions.organizationId, context.organizationId)))
+        .where(
+          and(
+            eq(templateVersions.id, versionId),
+            eq(templateVersions.organizationId, context.organizationId),
+          ),
+        )
         .limit(1);
       if (!row) throw notFound("Versão não encontrada.");
-      if (row.version.status !== "DRAFT") throw conflict("VERSION_IMMUTABLE", "A versão já foi publicada ou arquivada.");
+      if (row.version.status !== "DRAFT")
+        throw conflict("VERSION_IMMUTABLE", "A versão já foi publicada ou arquivada.");
       if (row.version.revision !== baseRevision) {
-        throw conflict("REVISION_CONFLICT", "A versão foi alterada em outro lugar.", { currentRevision: row.version.revision });
+        throw conflict("REVISION_CONFLICT", "A versão foi alterada em outro lugar.", {
+          currentRevision: row.version.revision,
+        });
       }
       if (!row.template.name || row.template.identificationStatus === "PENDING_CONFIRMATION") {
         throw validationFailed("Confirme a identificação do modelo antes da publicação.");
@@ -260,7 +342,8 @@ export class PostgresTemplateRepository {
         .select({ itemCount: count() })
         .from(templateItems)
         .where(eq(templateItems.versionId, versionId));
-      if (!sectionCount || !itemCount) throw validationFailed("A versão precisa de ao menos uma seção e um item.");
+      if (!sectionCount || !itemCount)
+        throw validationFailed("A versão precisa de ao menos uma seção e um item.");
 
       const content = await this.version(context, versionId);
       const checksum = `sha256:${createHash("sha256").update(JSON.stringify(content.sections)).digest("hex")}`;
@@ -273,7 +356,7 @@ export class PostgresTemplateRepository {
           publishedAt: now,
           publishedBy: context.userId,
           revision: row.version.revision + 1,
-          updatedAt: now
+          updatedAt: now,
         })
         .where(eq(templateVersions.id, versionId))
         .returning();
@@ -288,15 +371,15 @@ export class PostgresTemplateRepository {
           and(
             eq(operationConfigs.organizationId, context.organizationId),
             eq(operationConfigs.templateId, row.template.id),
-            eq(operationConfigs.active, true)
-          )
+            eq(operationConfigs.active, true),
+          ),
         )
         .limit(1);
       if (!existingConfig) {
         const [organization] = await tx
           .select({
             timezone: organizations.timezone,
-            weekStartsOn: organizations.weekStartsOn
+            weekStartsOn: organizations.weekStartsOn,
           })
           .from(organizations)
           .where(eq(organizations.id, context.organizationId))
@@ -308,7 +391,7 @@ export class PostgresTemplateRepository {
           timezone: organization.timezone,
           weekStartsOn: organization.weekStartsOn,
           maxOccurrencesPerDate: 1,
-          effectiveFrom: "2020-01-01"
+          effectiveFrom: "2020-01-01",
         });
       }
       await tx.insert(auditEvents).values({
@@ -317,7 +400,7 @@ export class PostgresTemplateRepository {
         entityId: versionId,
         action: "PUBLISHED",
         actorUserId: context.userId,
-        metadata: { checksum, versionNumber: published.versionNumber }
+        metadata: { checksum, versionNumber: published.versionNumber },
       });
       await tx.insert(syncChangeLog).values({
         organizationId: context.organizationId,
@@ -325,7 +408,12 @@ export class PostgresTemplateRepository {
         entityId: versionId,
         revision: published.revision,
         changeType: "UPSERT",
-        payload: { id: versionId, templateId: published.templateId, status: published.status, checksum }
+        payload: {
+          id: versionId,
+          templateId: published.templateId,
+          status: published.status,
+          checksum,
+        },
       });
       return published;
     });
@@ -336,7 +424,12 @@ export class PostgresTemplateRepository {
       const [template] = await tx
         .select()
         .from(checklistTemplates)
-        .where(and(eq(checklistTemplates.id, templateId), eq(checklistTemplates.organizationId, context.organizationId)))
+        .where(
+          and(
+            eq(checklistTemplates.id, templateId),
+            eq(checklistTemplates.organizationId, context.organizationId),
+          ),
+        )
         .limit(1);
       if (!template) throw notFound("Modelo não encontrado.");
       const now = new Date();
@@ -350,7 +443,7 @@ export class PostgresTemplateRepository {
         entityType: "TEMPLATE",
         entityId: templateId,
         action: "ARCHIVED",
-        actorUserId: context.userId
+        actorUserId: context.userId,
       });
       await tx.insert(syncChangeLog).values({
         organizationId: context.organizationId,
@@ -358,42 +451,61 @@ export class PostgresTemplateRepository {
         entityId: templateId,
         revision: 1,
         changeType: "ARCHIVE",
-        payload: { id: templateId, archivedAt: now.toISOString() }
+        payload: { id: templateId, archivedAt: now.toISOString() },
       });
       return archived;
     });
   }
 
-  async deleteUnusedDraft(context: Context, templateId: string) {
+  async deleteUnusedTemplate(context: Context, templateId: string) {
     return this.database.transaction(async (tx) => {
+      const [template] = await tx
+        .select({ id: checklistTemplates.id })
+        .from(checklistTemplates)
+        .where(
+          and(
+            eq(checklistTemplates.id, templateId),
+            eq(checklistTemplates.organizationId, context.organizationId),
+          ),
+        )
+        .for("update");
+      if (!template) throw notFound("Modelo não encontrado.");
       const [usage] = await tx
         .select({ count: count() })
         .from(weeklyChecklists)
         .where(eq(weeklyChecklists.templateId, templateId));
-      const published = await tx
-        .select({ count: count() })
-        .from(templateVersions)
-        .where(and(eq(templateVersions.templateId, templateId), eq(templateVersions.status, "PUBLISHED")));
-      if (usage.count || published[0].count) {
+      if (usage.count) {
         throw conflict("TEMPLATE_HAS_HISTORY", "O modelo possui histórico e deve ser arquivado.");
       }
-      const versions = await tx.select({ id: templateVersions.id }).from(templateVersions).where(eq(templateVersions.templateId, templateId));
+      const versions = await tx
+        .select({ id: templateVersions.id })
+        .from(templateVersions)
+        .where(eq(templateVersions.templateId, templateId));
       await tx.insert(syncChangeLog).values({
         organizationId: context.organizationId,
         entityType: "TEMPLATE",
         entityId: templateId,
         revision: 1,
         changeType: "DELETE",
-        payload: { id: templateId }
+        payload: { id: templateId },
       });
       for (const version of versions) {
         await tx.delete(templateItems).where(eq(templateItems.versionId, version.id));
         await tx.delete(templateSections).where(eq(templateSections.versionId, version.id));
       }
+      await tx
+        .delete(assetTemplateAssignments)
+        .where(eq(assetTemplateAssignments.templateId, templateId));
+      await tx.delete(operationConfigs).where(eq(operationConfigs.templateId, templateId));
       await tx.delete(templateVersions).where(eq(templateVersions.templateId, templateId));
       const deleted = await tx
         .delete(checklistTemplates)
-        .where(and(eq(checklistTemplates.id, templateId), eq(checklistTemplates.organizationId, context.organizationId)))
+        .where(
+          and(
+            eq(checklistTemplates.id, templateId),
+            eq(checklistTemplates.organizationId, context.organizationId),
+          ),
+        )
         .returning({ id: checklistTemplates.id });
       if (!deleted.length) throw notFound("Modelo não encontrado.");
     });
@@ -402,12 +514,14 @@ export class PostgresTemplateRepository {
   private async writeSections(
     tx: Parameters<Parameters<typeof this.database.transaction>[0]>[0],
     versionId: string,
-    sections: CreateTemplateInput["sections"] | UpdateTemplateVersionInput["sections"]
+    sections: CreateTemplateInput["sections"] | UpdateTemplateVersionInput["sections"],
   ) {
     let itemOrder = 0;
     for (const [sectionOrder, section] of sections.entries()) {
       const sectionId = section.id ?? randomUUID();
-      await tx.insert(templateSections).values({ id: sectionId, versionId, title: section.title, sortOrder: sectionOrder });
+      await tx
+        .insert(templateSections)
+        .values({ id: sectionId, versionId, title: section.title, sortOrder: sectionOrder });
       await tx.insert(templateItems).values(
         section.items.map((item) => ({
           id: item.id ?? randomUUID(),
@@ -418,8 +532,8 @@ export class PostgresTemplateRepository {
           sortOrder: itemOrder++,
           requiredOnComplete: item.requiredOnComplete,
           requireObservationWhenNc: item.requireObservationWhenNc,
-          requirePhotoWhenNc: item.requirePhotoWhenNc
-        }))
+          requirePhotoWhenNc: item.requirePhotoWhenNc,
+        })),
       );
     }
   }

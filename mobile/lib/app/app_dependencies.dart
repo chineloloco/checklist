@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../core/config/app_config.dart';
@@ -52,13 +54,17 @@ final class AppDependencies {
     final checklistRepository = DriftChecklistRepository(database);
     final checklistService = ChecklistService(checklistRepository);
     final checklistApi = ChecklistApi(client);
-    final registryApi = RegistryApi(client, database);
     final syncCoordinator = SyncCoordinator(
       database: database,
       syncApi: SyncApi(client),
       checklistApi: checklistApi,
       checklistRepository: checklistRepository,
       deviceIdentity: deviceIdentity,
+    );
+    final registryApi = RegistryApi(
+      client,
+      database,
+      onQueued: () => unawaited(syncCoordinator.syncNow()),
     );
     await syncCoordinator.initialize();
     return AppDependencies._(

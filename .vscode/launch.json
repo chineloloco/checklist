@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Mobile: celular USB (API local)",
+      "type": "dart",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/mobile",
+      "program": "${workspaceFolder}/mobile/lib/main.dart",
+      "toolArgs": ["--dart-define=API_BASE_URL=http://127.0.0.1:3000"],
+      "preLaunchTask": "mobile: conectar API por USB"
+    },
+    {
+      "name": "Mobile: emulador Android (API local)",
+      "type": "dart",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/mobile",
+      "program": "${workspaceFolder}/mobile/lib/main.dart",
+      "toolArgs": ["--dart-define=API_BASE_URL=http://10.0.2.2:3000"]
+    }
+  ]
+}

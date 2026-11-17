@@ -7,7 +7,8 @@ const service = new TemplateService();
 
 export async function GET(request: NextRequest) {
   return apiHandler("templates:read", async (context) => {
-    const status = request.nextUrl.searchParams.get("status") as "DRAFT" | "ACTIVE" | "ARCHIVED" | null;
+    const status = request.nextUrl.searchParams.get("status") as
+      "DRAFT" | "ACTIVE" | "ARCHIVED" | null;
     const data = await service.list(context, status ?? undefined);
     return json({ data, nextCursor: null });
   });
@@ -18,6 +19,9 @@ export async function POST(request: NextRequest) {
     requireIdempotencyKey(request);
     const input = createTemplateSchema.parse(await request.json());
     const created = await service.create(context, input);
-    return json(created, { status: 201, headers: { Location: `/api/v1/templates/${created.template.id}` } });
+    return json(created, {
+      status: 201,
+      headers: { Location: `/api/v1/templates/${created.template.id}` },
+    });
   });
 }

@@ -13,22 +13,23 @@ final class PasswordAuthRepository implements AuthSessionRepository {
     required FlutterSecureStorage secureStorage,
     required Future<String> Function() deviceId,
     Dio? dio,
-  })  : _config = config,
-        _secureStorage = secureStorage,
-        _deviceId = deviceId,
-        _dio = dio ??
-            Dio(
-              BaseOptions(
-                baseUrl: config.hasApi ? '${config.apiV1Base}/' : '',
-                connectTimeout: const Duration(seconds: 15),
-                receiveTimeout: const Duration(seconds: 30),
-                sendTimeout: const Duration(seconds: 30),
-                headers: const {
-                  'accept': 'application/json',
-                  'content-type': 'application/json',
-                },
-              ),
-            );
+  }) : _config = config,
+       _secureStorage = secureStorage,
+       _deviceId = deviceId,
+       _dio =
+           dio ??
+           Dio(
+             BaseOptions(
+               baseUrl: config.hasApi ? '${config.apiV1Base}/' : '',
+               connectTimeout: const Duration(seconds: 15),
+               receiveTimeout: const Duration(seconds: 30),
+               sendTimeout: const Duration(seconds: 30),
+               headers: const {
+                 'accept': 'application/json',
+                 'content-type': 'application/json',
+               },
+             ),
+           );
 
   static const _sessionKey = 'password_session_v1';
 
@@ -56,7 +57,7 @@ final class PasswordAuthRepository implements AuthSessionRepository {
 
   @override
   Future<AuthSession> signIn({
-    required String email,
+    required String employeeNumber,
     required String password,
   }) async {
     if (!_config.hasApi) {
@@ -68,7 +69,7 @@ final class PasswordAuthRepository implements AuthSessionRepository {
       final response = await _dio.post<Object?>(
         'auth/login',
         data: {
-          'email': email.trim(),
+          'employeeNumber': employeeNumber.trim(),
           'password': password,
           'deviceId': await _deviceId(),
         },
@@ -78,7 +79,7 @@ final class PasswordAuthRepository implements AuthSessionRepository {
       return session;
     } on DioException catch (error) {
       if (error.response?.statusCode == 401) {
-        throw const AuthenticationFailure('E-mail ou senha inválidos.');
+        throw const AuthenticationFailure('Matrícula ou senha inválidas.');
       }
       throw AuthenticationFailure(
         _problemDetail(
@@ -167,14 +168,14 @@ final class PasswordAuthRepository implements AuthSessionRepository {
   }
 
   AuthSession _sessionFromJson(Map<String, Object?> json) => AuthSession(
-        accessToken: json['accessToken']! as String,
-        accessTokenExpiresAt: DateTime.parse(
-          json['accessTokenExpiresAt']! as String,
-        ).toUtc(),
-        refreshToken: json['refreshToken'] as String?,
-        subject: json['subject'] as String?,
-        displayName: json['displayName'] as String?,
-      );
+    accessToken: json['accessToken']! as String,
+    accessTokenExpiresAt: DateTime.parse(
+      json['accessTokenExpiresAt']! as String,
+    ).toUtc(),
+    refreshToken: json['refreshToken'] as String?,
+    subject: json['subject'] as String?,
+    displayName: json['displayName'] as String?,
+  );
 
   Future<void> _persist(AuthSession session) async {
     _memorySession = session;

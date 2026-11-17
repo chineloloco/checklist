@@ -1,92 +1,110 @@
 # Checklists operacionais
 
-Plataforma web e API para checklists semanais de veículos e equipamentos. O núcleo implementado usa Next.js 16, TypeScript, PostgreSQL/Neon, Drizzle ORM e autenticação própria por usuário e senha/NextAuth. A estrutura separa apresentação, rotas HTTP, serviços de aplicação, regras de domínio e repositórios por funcionalidade.
+Plataforma web, API e aplicativo Flutter para inspeções semanais de veículos e equipamentos. O painel administra usuários, cadastros e modelos; o aplicativo permite preencher e cadastrar dados offline, com envio posterior ao servidor.
 
-O catálogo inicial foi extraído da planilha `MODELOS DE CHECK LIST.xlsx`: são 14 modelos e 538 itens com a redação preservada. O modelo **VL — Veículos leves** é publicado pelo seed com seus 34 itens reais. O modelo **TE** permanece identificado como pendente de confirmação.
+O catálogo de origem contém **14 modelos e 538 itens**. Isso descreve o arquivo versionado, não a quantidade de modelos atualmente existente em cada banco. Consulte [a análise da planilha](docs/spreadsheet-analysis.md).
 
-## Executar localmente
+## Documentação
 
-Requisitos: Node.js 20.9 ou superior e um banco PostgreSQL 15 ou superior. Para produção, use as URLs pooled e direct fornecidas pelo Neon.
+| Documento                                                  | Conteúdo                                                      |
+| ---------------------------------------------------------- | ------------------------------------------------------------- |
+| [Aplicativo Flutter](mobile/README.md)                     | Instalação, conexão ao backend, login e testes no celular     |
+| [Arquitetura](docs/architecture.md)                        | Camadas, entidades, permissões, auditoria e regras            |
+| [Sincronização e limitações](docs/mobile-contract-gaps.md) | O que funciona offline e o que ainda falta                    |
+| [Operação e manutenção](docs/operations.md)                | Migrações, usuários, backup, limpeza de testes e distribuição |
+| [Tabelas da interface](docs/tabelas.md)                    | Componente compartilhado e estilos                            |
+| [OpenAPI](openapi/openapi.yaml)                            | Rotas e estruturas da API                                     |
 
-1. Instale as dependências:
+## Executar a plataforma localmente
 
-   ```powershell
-   npm install
-   ```
+Requisitos: Node.js conforme `engines` de [package.json](package.json), npm e PostgreSQL. O runtime usa `DATABASE_URL`; as migrações e scripts de manutenção preferem `DATABASE_DIRECT_URL`, quando disponível.
 
-2. Copie `.env.example` para `.env.local` e preencha `DATABASE_URL`, `DATABASE_DIRECT_URL` e `NEXTAUTH_SECRET`.
+Na raiz do repositório:
 
-3. Crie o esquema e carregue o catálogo:
+1. Execute `npm.cmd ci`.
+2. Copie `.env.example` para `.env.local` e configure as conexões, `NEXTAUTH_URL`, `NEXTAUTH_SECRET` e `AUTH_ALLOW_CREDENTIALS=true`.
+3. Execute `npm.cmd run db:migrate` para aplicar as migrações pendentes.
+4. **Somente para preparar um ambiente inicial ou de demonstração**, execute `npm.cmd run db:seed`.
+5. Execute `npm.cmd run dev` e acesse `http://localhost:3000`.
 
-   ```powershell
-   npm run db:migrate
-   npm run db:seed
-   ```
+No PowerShell, `npm.cmd` evita o bloqueio de execução que algumas máquinas aplicam a `npm.ps1`.
 
-4. Inicie a aplicação:
+O seed importa o catálogo e cria dados de demonstração. O modelo VL é publicado com seus 34 itens; TE fica pendente de identificação. Não execute o seed depois de limpar dados de teste se quiser manter o banco sem esses exemplos.
 
-   ```powershell
-   npm run dev
-   ```
+## Login e administração de usuários
 
-5. Acesse `http://localhost:3000`. Com `AUTH_ALLOW_CREDENTIALS=true`, o seed cria:
+O acesso por credenciais usa **matrícula e senha** no painel e no aplicativo. A matrícula é texto, preserva zeros iniciais, normaliza letras para maiúsculas e deve ser única no banco.
 
-   - administrador: `admin@checklist.local`
-   - responsável: `responsavel@checklist.local`
-   - senhas: os valores definidos em `SEED_ADMIN_PASSWORD` e `SEED_INSPECTOR_PASSWORD`
+As matrículas de demonstração para contas novas são configuradas por:
 
-O mesmo usuário e senha funciona no web e no mobile. Em produção, defina senhas fortes, `NEXTAUTH_SECRET` e `MOBILE_AUTH_SECRET` independentes, use HTTPS e mantenha o cadastro de usuários restrito aos administradores.
-
-## Verificação
-
-```powershell
-npm run typecheck
-npm run lint
-npm test
-npm run build
+```dotenv
+SEED_ADMIN_EMPLOYEE_NUMBER=000001
+SEED_INSPECTOR_EMPLOYEE_NUMBER=000002
+SEED_ADMIN_PASSWORD=defina-uma-senha-forte
+SEED_INSPECTOR_PASSWORD=defina-outra-senha-forte
 ```
 
-Os testes automatizados cobrem o recorte VL solicitado: duas datas na mesma semana com respostas independentes, reenvio idêntico sem duplicação, criação concorrente por dois dispositivos sem descarte silencioso, versão do modelo fixada na abertura, histórico de correções, permissões e início da semana na segunda-feira.
+O seed não altera a matrícula ou a senha de contas que já existem. Após atualizar um banco antigo, use uma sessão de administrador já aberta para cadastrar a matrícula dessas contas antes de sair. Os campos `SEED_ADMIN_EMAIL` e `SEED_INSPECTOR_EMAIL` continuam no seed para identificar suas contas de demonstração; e-mail não é obrigatório no cadastro administrativo nem é o identificador do login por senha.
 
-## O que está implementado
+A página **Usuários** (`/usuarios`) é exclusiva de administradores. Ela permite cadastrar e editar nome, matrícula, perfis, senha e situação. A senha exige pelo menos 10 caracteres e até 72 bytes UTF-8. Não é permitido desativar a própria conta nem retirar o último administrador ativo.
 
-- Login, sessão segura e permissões por papel para administração, frota, supervisão, preenchimento e auditoria.
-- Cadastros de empresas, locais, pessoas e ativos, com revisões de ativo.
-- Associação de modelo/configuração ao ativo.
-- Editor de modelos, campos de identificação, seções e itens; rascunho, nova versão, publicação, arquivamento e exclusão restrita de rascunho sem uso.
-- Checklist semanal vinculado a uma versão e configuração imutáveis; inspeções e respostas separadas por data e ocorrência.
-- Visão semanal em matriz, detalhes por data, identificação congelada, observações e histórico de correções.
-- Calendário operacional por configuração; célula vazia não vira pendência fora dos slots exigidos e a interface avisa que um celular offline pode ainda não ter enviado dados.
-- API transacional com validação Zod, autorização no servidor, erros Problem Details, `Idempotency-Key`, `If-Match`, recibos individuais de sincronização e log incremental com tombstones.
-- Detecção de dois dispositivos no mesmo ativo/modelo/semana/data. A segunda criação é preservada como candidata, abre um conflito e exige resolução explícita: manter primária, manter separada quando permitido ou mesclar escolhas por item.
-- Auditoria de criação, publicação, arquivamento, correção e resolução de conflitos.
-- Migrações Drizzle e seed idempotente com os 14 modelos reais.
+Conta de acesso e motorista/operador do formulário são entidades distintas. A identificação do motorista não substitui o registro do usuário que preencheu a inspeção.
+
+OIDC é uma integração opcional e usa o vínculo corporativo existente; sua configuração fica em `.env.example`.
+
+## Funcionalidades implementadas
+
+- Cadastros de empresas, locais, pessoas e ativos; edição e desativação no painel.
+- Editor de modelos e versões, publicação, arquivamento e exclusão restrita de rascunhos sem uso.
+- Semana vinculada a um ativo, modelo, versão e configuração operacional.
+- Inspeções independentes por data e ocorrência, com respostas `C`, `NC`, `NA` ou vazias.
+- Visão semanal, detalhes, fotos e correções com justificativa.
+- Cadastros e preenchimento offline no aplicativo, com outbox transacional.
+- Detecção e preservação de inspeções concorrentes no mesmo slot, com resolução explícita.
+- Administração de contas e auditoria com identificação do autor.
+
+A regra inicial usa semana iniciada na segunda-feira e fuso padrão `America/Fortaleza`, configurável no ambiente. Datas da inspeção são datas locais; instantes de auditoria são armazenados com fuso.
+
+## Auditoria e exclusões
+
+Novos eventos preservam `actor_user_id` e `actor_display_name`. Revisões de inspeção preservam `authored_by` e `authored_display_name`. A mudança posterior do nome não reescreve esses campos históricos.
+
+Eventos antigos sem nome preservado podem mostrar o nome atual do cadastro, sinalizado na interface. A auditoria não equivale a um histórico de cada tecla digitada offline: ela registra as operações que chegam ao servidor.
+
+Desativar um cadastro não o apaga. Exclusão definitiva de dados de teste é manutenção excepcional, com prévia, backup e transação. Consulte [Operação e manutenção](docs/operations.md).
+
+## Verificações e formatação
+
+```powershell
+npm.cmd run format:check
+npm.cmd run lint
+npm.cmd run typecheck
+npm.cmd test
+npm.cmd run build
+```
+
+Para formatar o código web/API, execute `npm.cmd run format`. O padrão fica em `.prettierrc.json`; migrações, arquivos gerados e Dart ficam fora desse comando.
+
+Os testes cobrem regras de domínio, permissões, matrícula, administração de usuários, cadastros e contratos de sincronização. No aplicativo há testes de repositório offline, reenvios, edição durante o envio, seletores e preenchimento. Esses testes não substituem a homologação em aparelhos reais.
 
 ## Estrutura
 
 ```text
-src/app/                       páginas e Route Handlers
-src/features/*/domain          regras e validações
-src/features/*/application     serviços de negócio
-src/features/*/infrastructure  repositórios PostgreSQL
-src/features/*/presentation    componentes da web
-src/infrastructure/            banco, HTTP e utilidades compartilhadas
-drizzle/                       migrações e metadados versionáveis
-scripts/                       migração e seed
+src/app/                    páginas Next.js e rotas HTTP
+src/features/               domínio, aplicação, infraestrutura e apresentação por funcionalidade
+src/components/             navegação e componentes compartilhados
+src/infrastructure/db/      cliente e esquema PostgreSQL
+src/shared/                 erros, datas, hashes e apresentação da API
+mobile/                     aplicativo Flutter e testes
+drizzle/                    migrações versionadas
+scripts/                    migração, seed e manutenção
+specs/                      catálogo de origem e validação
+docs/                       documentação técnica e operacional
+openapi/                    contrato da API
 ```
 
-O contrato da API está em [openapi/openapi.yaml](openapi/openapi.yaml). As decisões de arquitetura e sincronização estão em [docs/architecture.md](docs/architecture.md), e a rastreabilidade da planilha em [docs/spreadsheet-analysis.md](docs/spreadsheet-analysis.md).
+## Limitações atuais
 
-## Dependências externas e decisões pendentes
+A sincronização ainda não reconstrói no celular todas as inspeções feitas em outro aparelho. A troca entre contas no mesmo dispositivo é bloqueada para proteger os dados locais. Anulação de inspeções já enviadas, assinaturas, armazenamento dedicado de fotos e exportações ainda precisam de desenvolvimento ou definição.
 
-- Neon/PostgreSQL precisa ser configurado fora do repositório; nenhuma credencial do banco é enviada ao navegador ou ao aplicativo.
-- O mobile aceita até cinco fotos por inspeção e as envia na revisão versionada. O armazenamento dedicado em S3 compatível e a assinatura desenhada continuam pendentes de definição.
-- Também permanecem configuráveis, sem suposição operacional: dias obrigatórios, mais de uma inspeção na data, campos obrigatórios e ações para `NC`.
-- Não há bloqueio do veículo, aprovação automática ou reprovação implícita.
-- O aplicativo Flutter/Drift está no primeiro recorte offline de VL; assinaturas, arquivos e alguns contratos de sincronização ainda dependem das definições listadas abaixo.
-
-## Aplicativo móvel Flutter
-
-O cliente de preenchimento offline está em [`mobile/`](mobile/README.md). Ele usa Flutter, Dart, SQLite cifrado com Drift, login próprio com tokens rotativos, outbox transacional e sincronização push/pull. A criação e administração de modelos continuam exclusivas da plataforma web.
-
-Antes da homologação ponta a ponta, consulte as [lacunas contratuais do aplicativo móvel](docs/mobile-contract-gaps.md), especialmente identidade Bearer/JWKS, associação ativo-modelo, conteúdo do pull e semântica de mutações no `sync/push`.
+Antes da produção também precisam ser conferidos limite de tentativas de login, encerramento de sessões após troca de senha, assinatura release do Android, monitoramento, backup e restauração. Os detalhes estão em [Sincronização e limitações](docs/mobile-contract-gaps.md).

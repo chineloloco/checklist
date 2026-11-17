@@ -4,9 +4,9 @@ import path from "node:path";
 export default defineConfig({
   test: {
     environment: "node",
-    coverage: { reporter: ["text", "json", "html"] }
+    coverage: { reporter: ["text", "json", "html"] },
   },
   resolve: {
-    alias: { "@": path.resolve(import.meta.dirname, "src") }
-  }
+    alias: { "@": path.resolve(import.meta.dirname, "src") },
+  },
 });

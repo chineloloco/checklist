@@ -9,6 +9,7 @@ import '../../../core/time/week.dart';
 import '../domain/checklist_models.dart';
 import '../domain/checklist_repository.dart';
 import 'local/app_database.dart';
+import 'local/pending_registry.dart';
 
 final class DriftChecklistRepository implements ChecklistRepository {
   DriftChecklistRepository(this._db, {Uuid? uuid})
@@ -142,6 +143,7 @@ final class DriftChecklistRepository implements ChecklistRepository {
         await _cachePeople(people);
       }
 
+      final pendingAssets = await pendingRegistryIds(_db, 'ASSET');
       final availableAssetIds = assets
           .map((asset) => asset['id']?.toString())
           .whereType<String>()
@@ -150,7 +152,8 @@ final class DriftChecklistRepository implements ChecklistRepository {
         _db.localAssets,
       )..where((table) => table.active.equals(true))).get();
       for (final stored in storedActiveAssets) {
-        if (!availableAssetIds.contains(stored.id)) {
+        if (!availableAssetIds.contains(stored.id) &&
+            !pendingAssets.contains(stored.id)) {
           await (_db.update(_db.localAssets)
                 ..where((table) => table.id.equals(stored.id)))
               .write(const LocalAssetsCompanion(active: Value(false)));
@@ -434,6 +437,8 @@ final class DriftChecklistRepository implements ChecklistRepository {
       'clientWeeklyChecklistId': id,
       'assetId': assetId,
       'templateId': template.templateId,
+      'templateVersionId': template.templateVersionId,
+      'operationConfigId': template.operationConfigId,
       'localDate': isoDate(localDate),
     };
     await _db.transaction(() async {
@@ -713,38 +718,49 @@ final class DriftChecklistRepository implements ChecklistRepository {
   }
 
   @override
-  Future<void> deleteUnsyncedInspection(String inspectionId) async {
+  Future<void> deactivateUnsyncedInspection(String inspectionId) async {
     final inspection = await (_db.select(
       _db.localInspections,
     )..where((table) => table.id.equals(inspectionId))).getSingle();
+    if (inspection.lifecycleStatus == 'VOIDED') return;
     if (inspection.serverId != null ||
         inspection.revision != null ||
         inspection.syncState == 'SYNCED' ||
         inspection.syncState == 'SYNCING') {
       throw const ValidationFailure(
-        'Este formulário já foi enviado e não pode ser excluído pelo aplicativo.',
+        'Este formulário já foi enviado e não pode ser desativado pelo aplicativo.',
       );
     }
-    final attachments = await (_db.select(
-      _db.localAttachments,
-    )..where((table) => table.inspectionId.equals(inspectionId))).get();
     await _db.transaction(() async {
       await (_db.delete(
         _db.syncOutboxOperations,
       )..where((table) => table.entityId.equals(inspectionId))).go();
-      await (_db.delete(
-        _db.localAttachments,
-      )..where((table) => table.inspectionId.equals(inspectionId))).go();
-      await (_db.delete(
-        _db.localInspectionResponses,
-      )..where((table) => table.inspectionId.equals(inspectionId))).go();
-      await (_db.delete(
+      final identity = (jsonDecode(inspection.identificationJson) as Map);
+      await _db
+          .into(_db.syncOutboxOperations)
+          .insert(
+            SyncOutboxOperationsCompanion.insert(
+              operationId: _uuid.v7(),
+              entityType: 'AUDIT_EVENT',
+              mutation: 'VOID',
+              entityId: inspectionId,
+              clientOccurredAt: DateTime.now().toUtc(),
+              payloadJson: jsonEncode({
+                'localDate': inspection.localDate,
+                'assetCode': identity['assetCode'] ?? '',
+              }),
+            ),
+          );
+      await (_db.update(
         _db.localInspections,
-      )..where((table) => table.id.equals(inspectionId))).go();
+      )..where((table) => table.id.equals(inspectionId))).write(
+        LocalInspectionsCompanion(
+          lifecycleStatus: const Value('VOIDED'),
+          syncState: const Value('LOCAL_ONLY'),
+          updatedAt: Value(DateTime.now().toUtc()),
+        ),
+      );
     });
-    for (final attachment in attachments) {
-      await _deleteFileIfPresent(attachment.localPath);
-    }
   }
 
   @override
@@ -956,7 +972,8 @@ final class DriftChecklistRepository implements ChecklistRepository {
               ..where(
                 (table) =>
                     table.entityId.equals(inspectionId) &
-                    table.state.equals('QUEUED'),
+                    table.state.equals('QUEUED') &
+                    table.attemptCount.equals(0),
               )
               ..limit(1))
             .getSingleOrNull();
@@ -996,10 +1013,13 @@ final class DriftChecklistRepository implements ChecklistRepository {
   }
 
   Future<void> _cacheCompanies(List<Map<String, Object?>> rows) async {
+    final pending = await pendingRegistryIds(_db, 'COMPANY');
     final available = rows.map((row) => row['id']!.toString()).toSet();
     final stored = await _db.select(_db.localCompanies).get();
     for (final row in stored) {
-      if (!available.contains(row.id) && row.active) {
+      if (!available.contains(row.id) &&
+          !pending.contains(row.id) &&
+          row.active) {
         await (_db.update(_db.localCompanies)
               ..where((table) => table.id.equals(row.id)))
             .write(const LocalCompaniesCompanion(active: Value(false)));
@@ -1019,10 +1039,13 @@ final class DriftChecklistRepository implements ChecklistRepository {
   }
 
   Future<void> _cacheSites(List<Map<String, Object?>> rows) async {
+    final pending = await pendingRegistryIds(_db, 'SITE');
     final available = rows.map((row) => row['id']!.toString()).toSet();
     final stored = await _db.select(_db.localSites).get();
     for (final row in stored) {
-      if (!available.contains(row.id) && row.active) {
+      if (!available.contains(row.id) &&
+          !pending.contains(row.id) &&
+          row.active) {
         await (_db.update(_db.localSites)
               ..where((table) => table.id.equals(row.id)))
             .write(const LocalSitesCompanion(active: Value(false)));
@@ -1034,7 +1057,7 @@ final class DriftChecklistRepository implements ChecklistRepository {
           .insertOnConflictUpdate(
             LocalSitesCompanion.insert(
               id: row['id']!.toString(),
-              companyId: row['companyId']!.toString(),
+              companyId: row['companyId']?.toString() ?? '',
               name: row['name']!.toString(),
               active: Value(row['active'] as bool? ?? true),
             ),
@@ -1048,10 +1071,13 @@ final class DriftChecklistRepository implements ChecklistRepository {
           (row) => row['name']?.toString() != 'Responsável pelo preenchimento',
         )
         .toList(growable: false);
+    final pending = await pendingRegistryIds(_db, 'PERSON');
     final available = filtered.map((row) => row['id']!.toString()).toSet();
     final stored = await _db.select(_db.localPeople).get();
     for (final row in stored) {
-      if (!available.contains(row.id) && row.active) {
+      if (!available.contains(row.id) &&
+          !pending.contains(row.id) &&
+          row.active) {
         await (_db.update(_db.localPeople)
               ..where((table) => table.id.equals(row.id)))
             .write(const LocalPeopleCompanion(active: Value(false)));

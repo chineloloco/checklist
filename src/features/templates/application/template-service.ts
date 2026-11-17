@@ -1,5 +1,9 @@
 import type { AuthContext } from "@/features/auth/application/auth-context";
-import type { CreateTemplateInput, UpdateTemplateMetadataInput, UpdateTemplateVersionInput } from "@/features/templates/domain/template";
+import type {
+  CreateTemplateInput,
+  UpdateTemplateMetadataInput,
+  UpdateTemplateVersionInput,
+} from "@/features/templates/domain/template";
 import { PostgresTemplateRepository } from "@/features/templates/infrastructure/postgres-template-repository";
 
 export class TemplateService {
@@ -31,7 +35,7 @@ export class TemplateService {
   archive(context: AuthContext, templateId: string) {
     return this.repository.archive(context, templateId);
   }
-  deleteUnusedDraft(context: AuthContext, templateId: string) {
-    return this.repository.deleteUnusedDraft(context, templateId);
+  deleteUnusedTemplate(context: AuthContext, templateId: string) {
+    return this.repository.deleteUnusedTemplate(context, templateId);
   }
 }

@@ -1,4 +1,5 @@
 export const permissions = [
+  "users:manage",
   "dashboard:read",
   "cadastros:read",
   "cadastros:write",
@@ -12,17 +13,12 @@ export const permissions = [
   "conflicts:read",
   "conflicts:resolve",
   "audit:read",
-  "sync"
+  "sync",
 ] as const;
 
 export type Permission = (typeof permissions)[number];
 export type Role =
-  | "ORG_ADMIN"
-  | "TEMPLATE_MANAGER"
-  | "FLEET_MANAGER"
-  | "SUPERVISOR"
-  | "INSPECTOR"
-  | "AUDITOR";
+  "ORG_ADMIN" | "TEMPLATE_MANAGER" | "FLEET_MANAGER" | "SUPERVISOR" | "INSPECTOR" | "AUDITOR";
 
 const rolePermissions: Record<Role, Permission[]> = {
   ORG_ADMIN: [...permissions],
@@ -32,7 +28,7 @@ const rolePermissions: Record<Role, Permission[]> = {
     "templates:write",
     "templates:publish",
     "templates:archive",
-    "audit:read"
+    "audit:read",
   ],
   FLEET_MANAGER: [
     "dashboard:read",
@@ -40,7 +36,7 @@ const rolePermissions: Record<Role, Permission[]> = {
     "cadastros:write",
     "templates:read",
     "inspections:read",
-    "conflicts:read"
+    "conflicts:read",
   ],
   SUPERVISOR: [
     "dashboard:read",
@@ -52,7 +48,7 @@ const rolePermissions: Record<Role, Permission[]> = {
     "conflicts:read",
     "conflicts:resolve",
     "audit:read",
-    "sync"
+    "sync",
   ],
   INSPECTOR: [
     "dashboard:read",
@@ -61,9 +57,9 @@ const rolePermissions: Record<Role, Permission[]> = {
     "templates:read",
     "inspections:read",
     "inspections:write",
-    "sync"
+    "sync",
   ],
-  AUDITOR: ["dashboard:read", "cadastros:read", "templates:read", "inspections:read", "audit:read"]
+  AUDITOR: ["dashboard:read", "cadastros:read", "templates:read", "inspections:read", "audit:read"],
 };
 
 export function permissionsForRoles(roles: Role[]): Permission[] {

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/errors/app_failure.dart';
 import '../../../core/input/brazilian_date_input.dart';
+import '../../../core/input/search_text.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/keyboard_aware_sheet.dart';
 import '../data/remote/registry_api.dart';
 import '../domain/checklist_models.dart';
 
@@ -10,7 +12,7 @@ Future<RegistryCompany?> pickCompany(
   BuildContext context,
   RegistryApi api,
 ) async {
-  final items = await _guard(context, api.companies);
+  final items = await _guard(context, () => api.companies(localOnly: true));
   if (items == null) return null;
   final offline = api.lastReadUsedCache;
   if (!context.mounted) return null;
@@ -29,7 +31,7 @@ final class RegistrySiteChoice {
   const RegistrySiteChoice({required this.site, required this.company});
 
   final RegistrySite site;
-  final RegistryCompany company;
+  final RegistryCompany? company;
 }
 
 Future<RegistrySiteChoice?> pickSite(
@@ -37,23 +39,26 @@ Future<RegistrySiteChoice?> pickSite(
   RegistryApi api, [
   RegistryCompany? company,
 ]) async {
-  final all = await _guard(context, api.sites);
+  final all = await _guard(context, () => api.sites(localOnly: true));
   if (all == null) return null;
   var offline = api.lastReadUsedCache;
   if (!context.mounted) return null;
   final companies = company == null
-      ? await _guard(context, api.companies)
+      ? await _guard(context, () => api.companies(localOnly: true))
       : <RegistryCompany>[company];
   if (companies == null) return null;
   offline = offline || api.lastReadUsedCache;
   if (!context.mounted) return null;
   final companiesById = {for (final item in companies) item.id: item};
   final choices = all
-      .where((item) => companiesById.containsKey(item.companyId))
+      .where(
+        (item) =>
+            item.companyId.isEmpty || companiesById.containsKey(item.companyId),
+      )
       .map(
         (item) => RegistrySiteChoice(
           site: item,
-          company: companiesById[item.companyId]!,
+          company: companiesById[item.companyId] ?? company,
         ),
       )
       .toList(growable: false);
@@ -62,62 +67,17 @@ Future<RegistrySiteChoice?> pickSite(
     title: company == null ? 'Local' : 'Local de ${company.name}',
     items: choices,
     label: (item) => item.site.name,
-    subtitle: company == null ? (item) => item.company.name : null,
+    subtitle: company == null
+        ? (item) => item.company?.name ?? 'Local compartilhado'
+        : null,
     createLabel: 'Cadastrar novo local',
     offline: offline,
     onCreate: () async {
-      final selectedCompany =
-          company ?? await _pickCompanyForSite(context, companies);
-      if (selectedCompany == null || !context.mounted) return null;
-      final site = await _createSite(context, api, selectedCompany);
+      final site = await _createSite(context, api);
       return site == null
           ? null
-          : RegistrySiteChoice(site: site, company: selectedCompany);
+          : RegistrySiteChoice(site: site, company: company);
     },
-  );
-}
-
-Future<RegistryCompany?> _pickCompanyForSite(
-  BuildContext context,
-  List<RegistryCompany> companies,
-) async {
-  if (companies.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Cadastre uma empresa antes de criar um local.'),
-      ),
-    );
-    return null;
-  }
-  if (companies.length == 1) return companies.single;
-  return showModalBottomSheet<RegistryCompany>(
-    context: context,
-    showDragHandle: true,
-    builder: (sheetContext) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Empresa do local',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 6),
-            const Text('Selecione a empresa à qual o novo local pertence.'),
-            const SizedBox(height: 12),
-            for (final item in companies)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(item.name),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.pop(sheetContext, item),
-              ),
-          ],
-        ),
-      ),
-    ),
   );
 }
 
@@ -125,7 +85,7 @@ Future<RegistryPerson?> pickPerson(
   BuildContext context,
   RegistryApi api,
 ) async {
-  final items = await _guard(context, api.people);
+  final items = await _guard(context, () => api.people(localOnly: true));
   if (items == null) return null;
   final offline = api.lastReadUsedCache;
   if (!context.mounted) return null;
@@ -158,69 +118,149 @@ Future<T?> _pick<T>(
   context: context,
   showDragHandle: true,
   isScrollControlled: true,
-  builder: (sheetContext) => SafeArea(
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * .72,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: offline
-                  ? null
-                  : () async {
-                      final created = await onCreate();
-                      if (created != null && sheetContext.mounted) {
-                        Navigator.pop(sheetContext, created);
-                      }
-                    },
-              icon: Icon(offline ? Icons.cloud_off_outlined : Icons.add),
-              label: Text(
-                offline ? 'Cadastro novo requer conexão' : createLabel,
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (items.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Text(
-                  offline
-                      ? 'Nenhum cadastro foi salvo neste aparelho. Conecte-se para atualizar a lista.'
-                      : 'Nenhum cadastro encontrado. Use a opção acima para adicionar.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: FieldColors.notApplicable),
-                ),
-              )
-            else
-              Flexible(
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: items.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(label(item)),
-                      subtitle: subtitle == null ? null : Text(subtitle(item)),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => Navigator.pop(sheetContext, item),
-                    );
-                  },
-                ),
-              ),
-          ],
-        ),
-      ),
-    ),
+  builder: (_) => _RegistryPicker<T>(
+    title: title,
+    items: items,
+    label: label,
+    subtitle: subtitle,
+    createLabel: createLabel,
+    offline: offline,
+    onCreate: onCreate,
   ),
 );
+
+class _RegistryPicker<T> extends StatefulWidget {
+  const _RegistryPicker({
+    required this.title,
+    required this.items,
+    required this.label,
+    required this.createLabel,
+    required this.offline,
+    required this.onCreate,
+    this.subtitle,
+  });
+
+  final String title;
+  final List<T> items;
+  final String Function(T) label;
+  final String Function(T)? subtitle;
+  final String createLabel;
+  final bool offline;
+  final Future<T?> Function() onCreate;
+
+  @override
+  State<_RegistryPicker<T>> createState() => _RegistryPickerState<T>();
+}
+
+class _RegistryPickerState<T> extends State<_RegistryPicker<T>> {
+  final _search = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final terms = normalizeSearchText(
+      _search.text,
+    ).split(RegExp(r'\s+')).where((term) => term.isNotEmpty);
+    final items = widget.items
+        .where((item) {
+          final text = normalizeSearchText(
+            '${widget.label(item)} ${widget.subtitle?.call(item) ?? ''}',
+          );
+          return terms.every(text.contains);
+        })
+        .toList(growable: false);
+    return KeyboardAwareSheet(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: double.infinity),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                widget.title,
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _search,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  labelText: 'Buscar',
+                  hintText: 'Digite o nome',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _search.text.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Limpar busca',
+                          icon: const Icon(Icons.close),
+                          onPressed: () {
+                            _search.clear();
+                            setState(() {});
+                          },
+                        ),
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final created = await widget.onCreate();
+                  if (created != null && context.mounted) {
+                    Navigator.pop(context, created);
+                  }
+                },
+                icon: const Icon(Icons.add),
+                label: Text(widget.createLabel),
+              ),
+              const SizedBox(height: 12),
+              if (items.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Text(
+                    _search.text.trim().isNotEmpty
+                        ? 'Nenhum resultado para esta busca.'
+                        : widget.offline
+                        ? 'Nenhum cadastro salvo. Use a opção acima para cadastrar offline.'
+                        : 'Nenhum cadastro encontrado. Use a opção acima para adicionar.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: FieldColors.notApplicable),
+                  ),
+                )
+              else
+                SizedBox(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: items.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final item = items[index];
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(widget.label(item)),
+                        subtitle: widget.subtitle == null
+                            ? null
+                            : Text(widget.subtitle!(item)),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.pop(context, item),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 Future<RegistryCompany?> _createCompany(
   BuildContext context,
@@ -242,21 +282,14 @@ Future<RegistryCompany?> _createCompany(
   );
 }
 
-Future<RegistrySite?> _createSite(
-  BuildContext context,
-  RegistryApi api,
-  RegistryCompany company,
-) async {
+Future<RegistrySite?> _createSite(BuildContext context, RegistryApi api) async {
   final result = await _showForm(
     context,
-    title: 'Novo local · ${company.name}',
+    title: 'Novo local',
     fields: const [_FieldSpec('name', 'Nome do local', required: true)],
   );
   if (result == null || !context.mounted) return null;
-  return _guard(
-    context,
-    () => api.createSite(companyId: company.id, name: result['name']!),
-  );
+  return _guard(context, () => api.createSite(name: result['name']!));
 }
 
 Future<RegistryPerson?> _createPerson(BuildContext context, RegistryApi api) =>

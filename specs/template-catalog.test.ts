@@ -1,3 +1,17 @@
-import { describe,expect,it } from "vitest";
+import { describe, expect, it } from "vitest";
 import catalog from "./template-catalog.json";
-describe("spreadsheet catalog",()=>{it("keeps all 14 models and the exact VL slice",()=>{expect(catalog.templates).toHaveLength(14);const vl=catalog.templates.find((item)=>item.code==="VL")!;expect(vl.item_count).toBe(34);const items=vl.sections.flatMap((section)=>section.items);expect(items[0].text).toBe("Carteira de habilitação");expect(items.at(-1)?.text).toBe("Vazamentos");});it("keeps TE pending instead of inventing a name",()=>{const te=catalog.templates.find((item)=>item.code==="TE")!;expect(te.name).toBeNull();expect(te.identification_status).toBe("PENDING_CONFIRMATION");});});
+describe("spreadsheet catalog", () => {
+  it("keeps all 14 models and the exact VL slice", () => {
+    expect(catalog.templates).toHaveLength(14);
+    const vl = catalog.templates.find((item) => item.code === "VL")!;
+    expect(vl.item_count).toBe(34);
+    const items = vl.sections.flatMap((section) => section.items);
+    expect(items[0].text).toBe("Carteira de habilitação");
+    expect(items.at(-1)?.text).toBe("Vazamentos");
+  });
+  it("keeps TE pending instead of inventing a name", () => {
+    const te = catalog.templates.find((item) => item.code === "TE")!;
+    expect(te.name).toBeNull();
+    expect(te.identification_status).toBe("PENDING_CONFIRMATION");
+  });
+});

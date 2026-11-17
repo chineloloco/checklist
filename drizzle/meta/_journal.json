@@ -36,6 +36,27 @@
       "when": 1794763977693,
       "tag": "0004_remove_placeholder_person",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794763977694,
+      "tag": "0005_optional_site_company",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794763977695,
+      "tag": "0006_user_audit_names",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794763977696,
+      "tag": "0007_employee_number_login",
+      "breakpoints": true
     }
   ]
 }

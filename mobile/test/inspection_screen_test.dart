@@ -8,6 +8,27 @@ import 'package:intl/date_symbol_data_local.dart';
 void main() {
   setUpAll(() => initializeDateFormatting('pt_BR'));
 
+  testWidgets('rola suavemente ao selecionar uma resposta', (tester) async {
+    final repository = _InspectionRepository(_draft(result: null));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: InspectionScreen(repository: repository, inspectionId: 'i-1'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('C'));
+    await tester.pumpAndSettle();
+    final scrollable = tester.state<ScrollableState>(
+      find.byType(Scrollable).first,
+    );
+    final before = scrollable.position.pixels;
+    await tester.tap(find.text('C'));
+    await tester.pumpAndSettle();
+    expect(repository.savedResult, InspectionResult.compliant);
+    expect(scrollable.position.pixels, greaterThan(before));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('tocar na resposta selecionada remove a seleção', (tester) async {
     final repository = _InspectionRepository(_draft());
     await tester.pumpWidget(
@@ -49,7 +70,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('permite excluir formulário que ainda não foi enviado', (
+  testWidgets('permite a desativação de formulário não enviado', (
     tester,
   ) async {
     final repository = _InspectionRepository(_draft());
@@ -60,13 +81,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final delete = find.text('Excluir formulário não enviado');
+    final delete = find.text('Desativar formulário não enviado');
     await tester.scrollUntilVisible(delete, 400);
     await tester.tap(delete);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Excluir'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Desativar'));
     await tester.pumpAndSettle();
-
     expect(repository.deleted, isTrue);
   });
 }
@@ -130,7 +150,7 @@ final class _InspectionRepository implements ChecklistRepository {
   }
 
   @override
-  Future<void> deleteUnsyncedInspection(String inspectionId) async {
+  Future<void> deactivateUnsyncedInspection(String inspectionId) async {
     deleted = true;
   }
 

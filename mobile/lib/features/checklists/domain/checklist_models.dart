@@ -32,7 +32,7 @@ extension InspectionLifecycleX on InspectionLifecycle {
     InspectionLifecycle.draft => 'Rascunho',
     InspectionLifecycle.completed => 'Concluída',
     InspectionLifecycle.corrected => 'Corrigida',
-    InspectionLifecycle.voided => 'Anulada',
+    InspectionLifecycle.voided => 'Desativada',
   };
 
   static InspectionLifecycle fromCode(String value) => switch (value) {
@@ -323,7 +323,9 @@ final class InspectionDraft {
   bool get canComplete => requiredAnsweredCount == requiredCount;
   double get progress => items.isEmpty ? 0 : answeredCount / items.length;
   bool get canDeleteBeforeSync =>
-      !hasBeenSent && syncState != LocalSyncState.syncing;
+      lifecycle != InspectionLifecycle.voided &&
+      !hasBeenSent &&
+      syncState != LocalSyncState.syncing;
 }
 
 final class InspectionAttachment {

@@ -1,0 +1,12 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "mobile: conectar API por USB",
+      "type": "process",
+      "command": "${env:LOCALAPPDATA}/Android/sdk/platform-tools/adb.exe",
+      "args": ["reverse", "tcp:3000", "tcp:3000"],
+      "problemMatcher": []
+    }
+  ]
+}

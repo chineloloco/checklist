@@ -3,6 +3,9 @@ import { headers } from "next/headers";
 import { authOptions } from "@/features/auth/infrastructure/auth-options";
 import { hasPermission, type Permission, type Role } from "@/features/auth/domain/permissions";
 import { verifyMobileAccessToken } from "@/features/auth/infrastructure/mobile-password-auth";
+import { and, eq } from "drizzle-orm";
+import { getDb } from "@/infrastructure/db/client";
+import { users } from "@/infrastructure/db/schema";
 
 export type AuthContext = {
   userId: string;
@@ -14,6 +17,23 @@ export type AuthContext = {
 export class AuthenticationError extends Error {}
 export class AuthorizationError extends Error {}
 
+async function activeContext(userId: string, organizationId: string): Promise<AuthContext> {
+  const [user] = await getDb()
+    .select({
+      userId: users.id,
+      organizationId: users.organizationId,
+      roles: users.roles,
+      displayName: users.displayName,
+    })
+    .from(users)
+    .where(
+      and(eq(users.id, userId), eq(users.organizationId, organizationId), eq(users.active, true)),
+    )
+    .limit(1);
+  if (!user) throw new AuthenticationError("Conta desativada ou indisponível.");
+  return user;
+}
+
 export async function getAuthContext(): Promise<AuthContext> {
   const authorization = (await headers()).get("authorization");
   if (authorization) {
@@ -21,12 +41,7 @@ export async function getAuthContext(): Promise<AuthContext> {
     if (!match) throw new AuthenticationError("Token de acesso inválido.");
     try {
       const claims = verifyMobileAccessToken(match[1]);
-      return {
-        userId: claims.sub,
-        organizationId: claims.organizationId,
-        roles: claims.roles,
-        displayName: claims.displayName
-      };
+      return await activeContext(claims.sub, claims.organizationId);
     } catch {
       throw new AuthenticationError("Token de acesso inválido ou expirado.");
     }
@@ -35,12 +50,7 @@ export async function getAuthContext(): Promise<AuthContext> {
   if (!session?.user?.id || !session.user.organizationId) {
     throw new AuthenticationError("Autenticação necessária.");
   }
-  return {
-    userId: session.user.id,
-    organizationId: session.user.organizationId,
-    roles: session.user.roles,
-    displayName: session.user.name ?? session.user.email ?? "Usuário"
-  };
+  return activeContext(session.user.id, session.user.organizationId);
 }
 
 export function requirePermission(context: AuthContext, permission: Permission): void {

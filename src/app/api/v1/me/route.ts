@@ -10,7 +10,7 @@ export async function GET() {
       timezone: process.env.DEFAULT_TIMEZONE ?? "America/Fortaleza",
       weekStartsOn: "MONDAY",
       roles: context.roles,
-      permissions: permissionsForRoles(context.roles)
-    })
+      permissions: permissionsForRoles(context.roles),
+    }),
   );
 }

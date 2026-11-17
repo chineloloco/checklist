@@ -10,7 +10,12 @@ export async function POST(request: NextRequest, { params }: Params) {
   return apiHandler("inspections:write", async (context) => {
     const operationId = requireIdempotencyKey(request);
     const input = createInspectionSchema.parse(await request.json());
-    const outcome = await service.createInspection(context, (await params).weeklyChecklistId, operationId, input);
+    const outcome = await service.createInspection(
+      context,
+      (await params).weeklyChecklistId,
+      operationId,
+      input,
+    );
     if (outcome.statusCode === 409) {
       return json(
         {
@@ -21,17 +26,17 @@ export async function POST(request: NextRequest, { params }: Params) {
           detail: "As duas inspeções foram preservadas para resolução explícita.",
           traceId: crypto.randomUUID(),
           conflictId: outcome.result.conflictId,
-          candidateInspectionId: outcome.result.id
+          candidateInspectionId: outcome.result.id,
         },
-        { status: 409, headers: { "content-type": "application/problem+json" } }
+        { status: 409, headers: { "content-type": "application/problem+json" } },
       );
     }
     return json(outcome.result, {
       status: outcome.statusCode,
       headers: {
         Location: `/api/v1/inspections/${outcome.result.id}`,
-        "Idempotency-Replayed": String(outcome.replayed)
-      }
+        "Idempotency-Replayed": String(outcome.replayed),
+      },
     });
   });
 }

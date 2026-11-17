@@ -3,7 +3,7 @@ export class DomainError extends Error {
     public readonly code: string,
     message: string,
     public readonly status: number,
-    public readonly details?: Record<string, unknown>
+    public readonly details?: Record<string, unknown>,
   ) {
     super(message);
     this.name = "DomainError";

@@ -1,16 +1,13 @@
-import { and, desc, eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { apiHandler, json } from "@/shared/presentation/api";
-import { getDb } from "@/infrastructure/db/client";
-import { auditEvents } from "@/infrastructure/db/schema";
+import { listAuditEvents } from "@/features/audit/infrastructure/audit-query";
+import { z } from "zod";
 export async function GET(request: NextRequest) {
   return apiHandler("audit:read", async (context) => {
-    const conditions = [eq(auditEvents.organizationId, context.organizationId)];
     const entityType = request.nextUrl.searchParams.get("entityType");
     const entityId = request.nextUrl.searchParams.get("entityId");
-    if (entityType) conditions.push(eq(auditEvents.entityType, entityType));
-    if (entityId) conditions.push(eq(auditEvents.entityId, entityId));
-    const data = await getDb().select().from(auditEvents).where(and(...conditions)).orderBy(desc(auditEvents.occurredAt)).limit(200);
+    if (entityId) z.uuid().parse(entityId);
+    const data = await listAuditEvents(context.organizationId, entityType, entityId);
     return json({ data, nextCursor: null });
   });
 }

@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthContext, requirePermission, type AuthContext } from "@/features/auth/application/auth-context";
+import {
+  getAuthContext,
+  requirePermission,
+  type AuthContext,
+} from "@/features/auth/application/auth-context";
 import type { Permission } from "@/features/auth/domain/permissions";
 import { problemResponse } from "@/shared/presentation/problem";
 import { validationFailed } from "@/shared/domain/errors";
 
 export async function apiHandler(
   permission: Permission,
-  handler: (context: AuthContext) => Promise<Response>
+  handler: (context: AuthContext) => Promise<Response>,
 ): Promise<Response> {
   try {
     const context = await getAuthContext();

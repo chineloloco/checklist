@@ -3,14 +3,18 @@ import { z } from "zod";
 export const responseInputSchema = z.object({
   itemId: z.uuid(),
   result: z.enum(["C", "NC", "NA"]).nullable(),
-  observation: z.string().max(4000).nullable().optional()
+  observation: z.string().max(4000).nullable().optional(),
 });
 
 export const inspectionAttachmentSchema = z.object({
   id: z.uuid(),
   mediaType: z.enum(["image/jpeg", "image/png"]),
   fileName: z.string().min(1).max(255),
-  contentBase64: z.string().min(1).max(3_500_000).regex(/^[A-Za-z0-9+/]+={0,2}$/)
+  contentBase64: z
+    .string()
+    .min(1)
+    .max(3_500_000)
+    .regex(/^[A-Za-z0-9+/]+={0,2}$/),
 });
 
 export const identificationSchema = z
@@ -29,7 +33,7 @@ export const identificationSchema = z
     driverLicenseNumber: z.string().max(30).nullable().optional(),
     driverLicenseExpiryDate: z.iso.date().nullable().optional(),
     moppExpiryDate: z.iso.date().nullable().optional(),
-    passengerTransportCourseExpiryDate: z.iso.date().nullable().optional()
+    passengerTransportCourseExpiryDate: z.iso.date().nullable().optional(),
   })
   .passthrough();
 
@@ -37,7 +41,9 @@ export const openWeeklyChecklistSchema = z.object({
   clientWeeklyChecklistId: z.uuid().optional(),
   assetId: z.uuid(),
   templateId: z.uuid(),
-  localDate: z.iso.date()
+  templateVersionId: z.uuid().optional(),
+  operationConfigId: z.uuid().optional(),
+  localDate: z.iso.date(),
 });
 
 export const createInspectionSchema = z.object({
@@ -50,7 +56,7 @@ export const createInspectionSchema = z.object({
   identification: identificationSchema,
   observations: z.string().max(10000).nullable().optional(),
   responses: z.array(responseInputSchema).max(500),
-  attachments: z.array(inspectionAttachmentSchema).max(5).default([])
+  attachments: z.array(inspectionAttachmentSchema).max(5).default([]),
 });
 
 export const updateInspectionSchema = z.object({
@@ -62,7 +68,7 @@ export const updateInspectionSchema = z.object({
   observations: z.string().max(10000).nullable().optional(),
   responses: z.array(responseInputSchema).max(500),
   correctionReason: z.string().min(3).max(1000).optional(),
-  attachments: z.array(inspectionAttachmentSchema).max(5).default([])
+  attachments: z.array(inspectionAttachmentSchema).max(5).default([]),
 });
 
 export type OpenWeeklyChecklistInput = z.infer<typeof openWeeklyChecklistSchema>;

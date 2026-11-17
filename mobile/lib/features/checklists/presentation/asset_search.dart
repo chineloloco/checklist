@@ -1,7 +1,8 @@
+import '../../../core/input/search_text.dart';
 import '../domain/checklist_models.dart';
 
 List<AssetSummary> filterAssets(Iterable<AssetSummary> assets, String query) {
-  final terms = _normalize(query)
+  final terms = normalizeSearchText(query)
       .split(RegExp(r'\s+'))
       .where((term) => term.isNotEmpty)
       .toList(growable: false);
@@ -10,7 +11,7 @@ List<AssetSummary> filterAssets(Iterable<AssetSummary> assets, String query) {
 
   return assets
       .where((asset) {
-        final searchableText = _normalize(
+        final searchableText = normalizeSearchText(
           [
             asset.code,
             asset.licensePlate,
@@ -24,16 +25,4 @@ List<AssetSummary> filterAssets(Iterable<AssetSummary> assets, String query) {
         return terms.every(searchableText.contains);
       })
       .toList(growable: false);
-}
-
-String _normalize(String value) {
-  const accented = 'áàâãäéèêëíìîïóòôõöúùûüç';
-  const plain = 'aaaaaeeeeiiiiooooouuuuc';
-  var normalized = value.toLowerCase().trim();
-
-  for (var index = 0; index < accented.length; index++) {
-    normalized = normalized.replaceAll(accented[index], plain[index]);
-  }
-
-  return normalized;
 }

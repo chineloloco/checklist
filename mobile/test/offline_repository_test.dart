@@ -1,14 +1,74 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:checklist_mobile/features/checklists/data/drift_checklist_repository.dart';
 import 'package:checklist_mobile/features/checklists/data/local/app_database.dart';
 import 'package:checklist_mobile/features/checklists/domain/checklist_models.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'test_fixture.dart';
 
 void main() {
+  test(
+    'opens multiple offline forms for assets without template assignments',
+    () async {
+      final database = AppDatabase(NativeDatabase.memory());
+      addTearDown(database.close);
+      final repository = DriftChecklistRepository(database);
+      await seedVlBootstrap(repository);
+      await database.delete(database.localAssetTemplateAssignments).go();
+      final original =
+          (await database.select(database.localAssets).get()).single;
+      const secondAssetId = '10000000-0000-4000-8000-000000000099';
+      await database
+          .into(database.localAssets)
+          .insert(
+            original
+                .toCompanion(false)
+                .copyWith(
+                  id: const Value(secondAssetId),
+                  code: const Value('VL-099'),
+                ),
+          );
+      final template = (await repository.listAllTemplateChoices()).single;
+      final inspectionIds = <String>[];
+      for (final asset in await repository.listAssets()) {
+        expect(await repository.listTemplateChoices(asset.id), isEmpty);
+        final weekId = await repository.openWeeklyChecklist(
+          assetId: asset.id,
+          template: template,
+          localDate: DateTime(2026, 11, 10),
+        );
+        inspectionIds.add(
+          await repository.openInspection(
+            weeklyChecklistId: weekId,
+            localDate: DateTime(2026, 11, 10),
+            identification: identification,
+          ),
+        );
+      }
+      expect(inspectionIds.toSet(), hasLength(2));
+      final first = await repository.getInspection(inspectionIds.first);
+      await repository.saveAnswer(
+        inspectionId: first.id,
+        itemId: first.items.first.id,
+        result: InspectionResult.compliant,
+      );
+      final second = await repository.getInspection(inspectionIds.last);
+      expect(second.items.first.result, isNull);
+      final queued = await database.select(database.syncOutboxOperations).get();
+      final weeks = queued.where((row) => row.entityType == 'WEEKLY_CHECKLIST');
+      expect(weeks, hasLength(2));
+      for (final week in weeks) {
+        final payload = (jsonDecode(week.payloadJson) as Map)
+            .cast<String, Object?>();
+        expect(payload['operationConfigId'], configId);
+      }
+    },
+  );
+
   test('mantém duas datas offline independentes e fixa a versão VL', () async {
     final database = AppDatabase(NativeDatabase.memory());
     addTearDown(database.close);
@@ -180,42 +240,57 @@ void main() {
     );
   });
 
-  test('anexa foto no payload e apaga formulário ainda não enviado', () async {
-    final database = AppDatabase(NativeDatabase.memory());
-    addTearDown(database.close);
-    final repository = DriftChecklistRepository(database);
-    final ids = await createTwoDates(database, repository);
-    final temp = await Directory.systemTemp.createTemp('inspection-photo-');
-    addTearDown(() async {
-      if (await temp.exists()) await temp.delete(recursive: true);
-    });
-    final photo = File('${temp.path}/evidence.jpg');
-    await photo.writeAsBytes([1, 2, 3, 4]);
+  test(
+    'anexa foto no payload e desativa formulário ainda não enviado',
+    () async {
+      final database = AppDatabase(NativeDatabase.memory());
+      addTearDown(database.close);
+      final repository = DriftChecklistRepository(database);
+      final ids = await createTwoDates(database, repository);
+      final temp = await Directory.systemTemp.createTemp('inspection-photo-');
+      addTearDown(() async {
+        if (await temp.exists()) await temp.delete(recursive: true);
+      });
+      final photo = File('${temp.path}/evidence.jpg');
+      await photo.writeAsBytes([1, 2, 3, 4]);
 
-    await repository.addPhotoAttachment(
-      inspectionId: ids.firstId,
-      localPath: photo.path,
-      mediaType: 'image/jpeg',
-    );
+      await repository.addPhotoAttachment(
+        inspectionId: ids.firstId,
+        localPath: photo.path,
+        mediaType: 'image/jpeg',
+      );
 
-    final draft = await repository.getInspection(ids.firstId);
-    expect(draft.attachments, hasLength(1));
-    final outbox = await (database.select(
-      database.syncOutboxOperations,
-    )..where((table) => table.entityId.equals(ids.firstId))).getSingle();
-    expect(outbox.payloadJson, contains('AQIDBA=='));
+      final draft = await repository.getInspection(ids.firstId);
+      expect(draft.attachments, hasLength(1));
+      final outbox = await (database.select(
+        database.syncOutboxOperations,
+      )..where((table) => table.entityId.equals(ids.firstId))).getSingle();
+      expect(outbox.payloadJson, contains('AQIDBA=='));
 
-    await repository.deleteUnsyncedInspection(ids.firstId);
+      await repository.deactivateUnsyncedInspection(ids.firstId);
 
-    expect(await photo.exists(), isFalse);
-    expect(
-      await (database.select(
-        database.localInspections,
-      )..where((table) => table.id.equals(ids.firstId))).getSingleOrNull(),
-      isNull,
-    );
-    expect((await repository.getInspection(ids.secondId)).id, ids.secondId);
-  });
+      final audit = await (database.select(
+        database.syncOutboxOperations,
+      )..where((table) => table.entityId.equals(ids.firstId))).getSingle();
+      expect(audit.entityType, 'AUDIT_EVENT');
+      expect(audit.mutation, 'VOID');
+      expect(
+        jsonDecode(audit.payloadJson),
+        containsPair('localDate', '2026-11-10'),
+      );
+
+      expect(await photo.exists(), isTrue);
+      expect(
+        (await repository.getInspection(ids.firstId)).lifecycle,
+        InspectionLifecycle.voided,
+      );
+      expect(
+        (await repository.getInspection(ids.firstId)).attachments,
+        hasLength(1),
+      );
+      expect((await repository.getInspection(ids.secondId)).id, ids.secondId);
+    },
+  );
 
   test('foto permanece opcional mesmo em item NC configurado', () async {
     final database = AppDatabase(NativeDatabase.memory());

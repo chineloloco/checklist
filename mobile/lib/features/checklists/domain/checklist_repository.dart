@@ -54,7 +54,7 @@ abstract interface class ChecklistRepository {
     required String attachmentId,
   });
 
-  Future<void> deleteUnsyncedInspection(String inspectionId);
+  Future<void> deactivateUnsyncedInspection(String inspectionId);
 
   Future<void> completeInspection(String inspectionId);
 }

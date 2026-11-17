@@ -3,9 +3,12 @@ import { PostgresChecklistRepository } from "@/features/checklists/infrastructur
 import type {
   CreateInspectionInput,
   OpenWeeklyChecklistInput,
-  UpdateInspectionInput
+  UpdateInspectionInput,
 } from "@/features/checklists/domain/inspection";
-import { identificationSchema, inspectionAttachmentSchema } from "@/features/checklists/domain/inspection";
+import {
+  identificationSchema,
+  inspectionAttachmentSchema,
+} from "@/features/checklists/domain/inspection";
 import { notFound } from "@/shared/domain/errors";
 
 export class ChecklistService {
@@ -19,7 +22,7 @@ export class ChecklistService {
     context: AuthContext,
     weeklyChecklistId: string,
     operationId: string,
-    input: CreateInspectionInput
+    input: CreateInspectionInput,
   ) {
     return this.repository.createInspection(context, weeklyChecklistId, operationId, input);
   }
@@ -50,9 +53,9 @@ export class ChecklistService {
       responses: current.responses.map((response) => ({
         itemId: response.itemId,
         result: response.result,
-        observation: response.observation
+        observation: response.observation,
       })),
-      attachments: inspectionAttachmentSchema.array().parse(current.attachments)
+      attachments: inspectionAttachmentSchema.array().parse(current.attachments),
     });
   }
 
@@ -60,7 +63,10 @@ export class ChecklistService {
     return this.repository.weeklyView(context, weeklyChecklistId);
   }
 
-  listWeekly(context: AuthContext, filters: { weekStartDate?: string; assetId?: string; templateId?: string }) {
+  listWeekly(
+    context: AuthContext,
+    filters: { weekStartDate?: string; assetId?: string; templateId?: string },
+  ) {
     return this.repository.listWeekly(context, filters);
   }
 }

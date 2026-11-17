@@ -61,7 +61,6 @@ class _AssetFormState extends State<AssetForm> {
         template: widget.template,
         licensePlate: _plate.text,
       );
-      await widget.dependencies.syncCoordinator.bootstrap();
       if (mounted) Navigator.pop(context, asset);
     } on AppFailure catch (error) {
       if (mounted) setState(() => _apiError = error.message);
@@ -194,7 +193,11 @@ class _AssetFormState extends State<AssetForm> {
     if (value != null && mounted) {
       setState(() {
         _company = value;
-        if (_site?.companyId != value.id) _site = null;
+        if (_site != null &&
+            _site!.companyId.isNotEmpty &&
+            _site!.companyId != value.id) {
+          _site = null;
+        }
       });
     }
   }
@@ -208,7 +211,7 @@ class _AssetFormState extends State<AssetForm> {
     if (value != null && mounted) {
       setState(() {
         _site = value.site;
-        _company = value.company;
+        _company = value.company ?? _company;
       });
     }
   }

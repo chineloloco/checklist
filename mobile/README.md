@@ -1,116 +1,120 @@
-# Checklists operacionais — aplicativo Flutter
+# Aplicativo Flutter
 
-Cliente móvel offline-first para preenchimento de inspeções. A administração de modelos e usuários permanece na plataforma web. O aplicativo usa Flutter, Dart, SQLite cifrado e Drift.
+Cliente de preenchimento offline para a plataforma de checklists. A administração de usuários e modelos ocorre no painel web. O aplicativo usa Drift, SQLite3MultipleCiphers e armazenamento seguro para chave do banco e tokens.
 
-## O que está implementado
+## Preparação
 
-- Login próprio com e-mail e senha cadastrados no backend.
-- Access token de curta duração e refresh token rotativo no armazenamento seguro do aparelho.
-- Bootstrap autenticado por `GET /api/v1/mobile/bootstrap`.
-- Cache local de versões publicadas, seções, itens, ativos, empresas, locais, motoristas/operadores e configurações operacionais.
-- Todos os formulários publicados aparecem antes da escolha do veículo ou equipamento.
-- Seletores de empresa, local e motorista/operador listam os cadastros existentes e permitem criar novos registros no próprio aplicativo.
-- Veículos e equipamentos podem ser cadastrados e vinculados ao formulário durante a abertura da semana.
-- Banco Drift cifrado com SQLite3MultipleCiphers; a chave fica no `flutter_secure_storage`.
-- Inspeções independentes por data e ocorrência, com respostas `C`, `NC`, `NA` ou sem resposta.
-- Salvamento automático e outbox gravados na mesma transação.
-- Push em lotes de até 100 operações e pull incremental por cursor.
-- Sincronização na abertura/retomada, por ação manual e após mudança de conectividade.
-- Estados visíveis de rascunho, concluída, pendente, enviando, sincronizada, falha e conflito.
-- Saída da conta sem apagar rascunhos ou operações pendentes.
-- Identificação utilizável offline com os cadastros recebidos no último bootstrap; novos cadastros continuam exigindo conexão.
+Use Flutter com Dart compatível com `environment.sdk` de [pubspec.yaml](pubspec.yaml), atualmente `>=3.12.0 <4.0.0`, e as ferramentas nativas da plataforma desejada.
 
-## Pré-requisitos
+Os projetos Android e iOS já existem no repositório. Não é necessário executar `flutter create` na instalação normal.
 
-- Flutter 3.44 ou superior
-- Dart 3.12 ou superior
-- Android 6.0+ ou iOS 15+
-- Backend, PostgreSQL e usuários de teste configurados conforme o README da raiz
-
-Para gerar os projetos nativos e o código Drift:
+A partir da raiz:
 
 ```powershell
-cd C:\vs\Forms\mobile
-flutter create --empty --platforms=android,ios --project-name checklist_mobile .
+Set-Location mobile
 flutter pub get
+```
+
+O arquivo `app_database.g.dart` é gerado. Ao alterar as tabelas Drift, regenere-o:
+
+```powershell
 dart run build_runner build --delete-conflicting-outputs
 ```
 
-O `build_runner` gera `lib/features/checklists/data/local/app_database.g.dart`.
+## Conectar ao backend
 
-## Executar localmente
+Prepare o backend seguindo [o README da raiz](../README.md). Migrações são aplicadas na raiz; o seed é opcional e cria dados de demonstração.
 
-Primeiro, na raiz do projeto, aplique as migrações, carregue os usuários e inicie o backend:
-
-```powershell
-cd C:\vs\Forms
-npm.cmd run db:migrate
-npm.cmd run db:seed
-npm.cmd run dev
-```
-
-Em outro terminal, inicie o aplicativo no emulador Android:
+Com o backend local na porta 3000, execute em `mobile/`:
 
 ```powershell
-cd C:\vs\Forms\mobile
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000
 ```
 
-`10.0.2.2` é o endereço usado somente pelo emulador Android. Para testar em um aparelho físico conectado por USB, crie um túnel e use `127.0.0.1`:
+`10.0.2.2` é destinado ao emulador Android. Para um aparelho Android conectado por USB:
 
 ```powershell
 & "$env:LOCALAPPDATA\Android\sdk\platform-tools\adb.exe" reverse tcp:3000 tcp:3000
 flutter run --dart-define=API_BASE_URL=http://127.0.0.1:3000
 ```
 
-O túnel precisa ser recriado depois de desconectar/reconectar o aparelho ou reiniciar o ADB. Como alternativa, use o IP do computador na mesma rede Wi-Fi, por exemplo `http://192.168.0.10:3000`. Em produção, use somente HTTPS, por exemplo:
+Recrie o túnel após reconectar o aparelho ou reiniciar o ADB. Para conexão pela rede local, use o endereço do computador alcançável pelo celular e permita a porta no firewall.
+
+Na distribuição, configure a URL HTTPS real:
 
 ```powershell
-flutter run --dart-define=API_BASE_URL=https://checklist.suaempresa.com
+flutter build apk --release --dart-define=API_BASE_URL=https://checklist.suaempresa.com
 ```
 
-`API_BASE_URL` é o host da plataforma, sem `/api/v1`. O aplicativo nunca recebe URL ou credencial do PostgreSQL/Neon.
+O projeto ainda precisa de identificador e assinatura release definitivos antes da distribuição. A configuração atual do Android utiliza assinatura de debug também no tipo release. Consulte [a operação do projeto](../docs/operations.md).
 
-Os usuários iniciais são definidos na raiz em `.env.local`:
+`API_BASE_URL` é o host da plataforma, sem `/api/v1`. O celular não recebe credenciais do PostgreSQL.
 
-```text
-SEED_ADMIN_EMAIL=admin@checklist.local
-SEED_ADMIN_PASSWORD=troque-esta-senha
-SEED_INSPECTOR_EMAIL=responsavel@checklist.local
-SEED_INSPECTOR_PASSWORD=troque-esta-senha
-```
+## Login
 
-Depois de alterar uma senha de seed em um banco que já possui o usuário, recrie ou atualize explicitamente esse usuário; o seed é idempotente e não sobrescreve contas existentes.
+Entre com **matrícula e senha** cadastradas em **Usuários** no painel. Matrícula é texto: `001234` mantém seus zeros. O primeiro acesso e o carregamento inicial precisam de internet.
 
-## Verificações
+A sessão fica salva no armazenamento seguro. Access tokens duram 15 minutos; refresh tokens duram 30 dias e rotacionam. O aplicativo permite continuar o preenchimento local sem sinal após o acesso inicial; enviar dados exige uma sessão aceita pelo servidor.
+
+A conta autenticada identifica o autor do preenchimento. O motorista/operador escolhido na identificação pode ser outra pessoa.
+
+Ao sair, os tokens são removidos, mas os dados locais e a fila permanecem. A mesma conta pode voltar. Outra conta é bloqueada enquanto o aparelho contém dados da conta anterior; não há separação automática de bancos por usuário.
+
+## Preenchimento e cadastros offline
+
+1. Selecione um modelo publicado com configuração ativa.
+2. Selecione ou cadastre o ativo e os dados da identificação.
+3. Abra a semana/data e preencha as respostas.
+4. Continue depois ou conclua a inspeção.
+5. Sincronize ao recuperar conexão e confira a confirmação.
+
+Empresa, local, motorista/operador e ativo podem ser cadastrados offline. Os seletores consultam o banco local, possuem busca e usam o catálogo do último bootstrap. Novos cadastros ficam na fila para envio.
+
+Respostas e fila são gravadas na mesma transação. Tocar na resposta selecionada a desmarca. Selecionar uma resposta provoca uma rolagem suave. A conclusão valida os itens obrigatórios e as observações exigidas para `NC`.
+
+Fotos são opcionais: câmera ou galeria, até cinco imagens por inspeção, com limite local de 2,5 MB por imagem. São persistidas no aparelho e enviadas em base64 junto à revisão.
+
+## Sincronização
+
+O coordenador envia dependências antes dos preenchimentos: empresas, locais, pessoas, ativos, semanas, inspeções e eventos de auditoria locais. Os lotes têm no máximo 100 operações.
+
+Depois que uma operação foi tentada, seu conteúdo é preservado para reenvio. Edições posteriores seguem em outra operação e aguardam a revisão confirmada pelo servidor. A fila não é apagada por falha de rede ou sessão expirada.
+
+Uma inspeção ainda não enviada pode ser desativada localmente. Sua criação pendente é removida da fila e um evento `AUDIT_EVENT/VOID` registra a ação na próxima sincronização. Isso não permite anular uma inspeção já enviada.
+
+O aplicativo ainda não materializa inspeções desconhecidas recebidas de outro celular. O pull também não substitui todo o conteúdo das inspeções locais por snapshots remotos completos. Consulte [as limitações](../docs/mobile-contract-gaps.md).
+
+## Após uma limpeza excepcional de testes
+
+O banco local pode conter dados e operações que foram removidos do servidor. Sair da conta ou apenas limpar o cache não remove essa fila.
+
+Depois de confirmar que os dados locais podem ser descartados, mantenha o aplicativo fechado e use no Android **Configurações → Aplicativos → Checklist → Armazenamento → Limpar dados**. Em seguida, abra o aplicativo e faça login novamente.
+
+Esse procedimento apaga rascunhos e fotos locais. Não o use como solução para falhas comuns de sincronização nem quando houver dados de trabalho ainda não enviados.
+
+## Verificação
+
+Em `mobile/`:
 
 ```powershell
-dart format --set-exit-if-changed lib test
 flutter analyze
 flutter test
+```
+
+Para formatar somente fontes e testes escritos no projeto, sem o arquivo gerado:
+
+```powershell
+$taskDartFiles = Get-ChildItem lib,test -Recurse -Filter *.dart | Where-Object { $_.Name -notlike '*.g.dart' } | Select-Object -ExpandProperty FullName
+dart format $taskDartFiles
 ```
 
 ## Estrutura
 
 ```text
-lib/
-  app/                       composição e ciclo de vida
-  core/                      configuração, erros, tema, rede e datas
-  features/auth/
-    domain/                  sessão e contrato do repositório
-    data/                    login, renovação e armazenamento seguro
-    presentation/            formulário de entrada
-  features/checklists/
-    domain/                  modelos e contrato do repositório
-    application/             casos de uso
-    data/local/              tabelas Drift e banco cifrado
-    data/remote/             bootstrap e identidade da API
-    presentation/            semana, data e editor móvel
-  features/sync/
-    domain/                  operações e estado da sincronização
-    application/             push/pull e política de tentativas
-    data/                    API e identidade do dispositivo
-    presentation/            estado e sincronização manual
+lib/app/                    composição, sessão e ciclo de vida
+lib/core/                   configuração, HTTP, erros, tema e widgets
+lib/features/auth/          login e armazenamento da sessão
+lib/features/checklists/    modelos, banco local, repositórios e telas
+lib/features/sync/          fila, coordenador, API e estados
+test/                       testes de domínio, persistência e interface
 ```
-
-Consulte [`../docs/mobile-contract-gaps.md`](../docs/mobile-contract-gaps.md) antes de homologar a sincronização: ainda há decisões de contrato sobre bootstrap, mutações, pull incremental e anexos.
